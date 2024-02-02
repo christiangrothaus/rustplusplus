@@ -12,7 +12,6 @@ export const data = new SlashCommandBuilder()
   );
 
 export const execute = (interaction: ChatInputCommandInteraction) => {
-  console.log(interaction.options.getString(MESSAGE_PARAM));
   rustPlusClient.sendRequest({
     sendTeamMessage: {
       message: interaction.options.getString(MESSAGE_PARAM)

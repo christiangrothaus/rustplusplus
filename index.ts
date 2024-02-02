@@ -8,7 +8,7 @@ type CommandModel = {
   execute: (interation: ChatInputCommandInteraction) => Promise<void>
 }
 
-export const rustPlusClient = new rustplus('us-main.winterust.net', '28115', 'STEAM_0:0:48680130', '');
+export const rustPlusClient = new rustplus('168.100.163.133', '28182', '76561198057625988', process.env.RUST_TOKEN);
 
 const init = async () => {
 // Create a new client instance
@@ -56,6 +56,8 @@ const init = async () => {
 
   // Log in to Discord with your client's token
   client.login(process.env.DISCORD_TOKEN);
+  
+  rustPlusClient.connect();
 };
 
 init();
