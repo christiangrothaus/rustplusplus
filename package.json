@@ -1,0 +1,15 @@
+{
+  "name": "rust-negative",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@liamcottle/rustplus.js": "^2.4.0",
+    "ts-node": "^10.9.2"
+  }
+}
