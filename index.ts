@@ -96,9 +96,7 @@ const init = async () => {
     
       const switchEntity = switchMap.get(entityId);
 
-      rustPlusClient.getEntityInfo(switchEntity.entityId, (message, more) => {
-        console.log(more);
-        console.log('getEntityInfo response message: ' + JSON.stringify(message));
+      rustPlusClient.getEntityInfo(switchEntity.entityId, () => {
       });
 
       if (action === 'on') {
