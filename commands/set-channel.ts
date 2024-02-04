@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { BehaviorSubject } from 'rxjs';
 import Command, { CommandExecute } from '../classes/Command';
 
@@ -8,7 +8,7 @@ export const data = new SlashCommandBuilder()
   .setName('setchannel')
   .setDescription('Sets the channel to be used');
 
-export const execute: CommandExecute = async (interaction: ChatInputCommandInteraction) => {
+export const execute: CommandExecute = async (interaction) => {
   channelId$.next(interaction.channelId);
 
   interaction.reply('Switches being created');

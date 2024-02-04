@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "start": "ts-node index.ts",
-    "deploy-commands": "ts-node deploy-commands.ts"
+    "start": "ts-node index.ts"
   },
   "author": "",
   "license": "ISC",
