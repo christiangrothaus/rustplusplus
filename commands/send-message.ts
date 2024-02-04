@@ -1,9 +1,9 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { rustPlusClient } from '..';
+import { SlashCommandBuilder } from 'discord.js';
+import Command, { CommandData, CommandExecute } from '../classes/Command';
 
 const MESSAGE_PARAM = 'message';
 
-export const data = new SlashCommandBuilder()
+const data: CommandData = new SlashCommandBuilder()
   .setName('sendmessage')
   .setDescription('Sends a message in game')
   .addStringOption(option => 
@@ -11,8 +11,8 @@ export const data = new SlashCommandBuilder()
       .setName(MESSAGE_PARAM)
   );
 
-export const execute = (interaction: ChatInputCommandInteraction) => {
-  rustPlusClient.sendRequest({
+const execute: CommandExecute = async (interaction, discordManager) => {
+  discordManager.rustPlus.sendRequest({
     sendTeamMessage: {
       message: interaction.options.getString(MESSAGE_PARAM)
     }
@@ -20,3 +20,5 @@ export const execute = (interaction: ChatInputCommandInteraction) => {
     interaction.reply('Message sent');
   });
 };
+
+export default new Command(data, execute);
