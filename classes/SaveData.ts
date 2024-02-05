@@ -10,7 +10,9 @@ type SavedDataModel = {
 
 export default class SaveData {
   messages: Map<string, Message<boolean>>;
+
   switches: Map<string, SwitchFcmNotification>;
+
   channelId: string;
 
   save = () => {
@@ -23,7 +25,6 @@ export default class SaveData {
   
     fs.writeFileSync('save.json', json, 'utf-8');
   };
-  switchMap: any;
 
   loadFromSave(): void {
     fs.readFile('save.json', 'utf-8', (error, data) => {

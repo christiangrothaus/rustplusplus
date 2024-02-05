@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, Events, Interaction, Message, ModalBuilder, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, Interaction, Message, ModalBuilder, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import SaveData from './SaveData';
 import { channelId$ } from '../commands/set-channel';
 import { bufferTime } from 'rxjs';
@@ -30,6 +30,7 @@ export default class DiscordManager {
 
   start(): void {
     this.loadCommands();
+    this.loadSaveData();
     this.registerListeners();
     this.createConnections();
   }
@@ -86,12 +87,22 @@ export default class DiscordManager {
     const row = new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, nameButton);
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
 
+    const embded = new EmbedBuilder()
+      .setColor(switchEntity.active ? 0x55ff55 : 0xff5555)
+      .setTitle(switchEntity.customName || switchEntity.name)
+      .addFields({ name: 'Status', value: switchEntity.active ? 'On' : 'Off' })
+      .setTimestamp();
+
     const message = await channel.send({
-      components: [row],
-      content: switchEntity.customName || switchEntity.entityName
+      embeds: [embded],
+      components: [row]
     });
 
     return message;
+  }
+
+  private loadSaveData(): void {
+    this.saveData.loadFromSave();
   }
 
   private createConnections(): void {
@@ -195,7 +206,7 @@ export default class DiscordManager {
         this.saveData.switches.set(fcmNotification.entityId, fcmNotification);
       });
   
-      if(this.saveData.switchMap.size && fcmNotifications.length) {
+      if(this.saveData.switches.size && fcmNotifications.length) {
         this.refreshMessages();
       }
     });
