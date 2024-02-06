@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import * as rustplus from '@liamcottle/rustplus.js';
-import DiscordManager from './classes/DiscordManager';
+import DiscordManager from './src/classes/DiscordManager';
 import { Client, GatewayIntentBits } from 'discord.js';
 
 export const discordManager = new DiscordManager(

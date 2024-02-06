@@ -1,5 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Command, { CommandData, CommandExecute } from '../classes/Command';
+import { ephemeralReply } from '../utils/replies';
 
 const MESSAGE_PARAM = 'message';
 
@@ -17,7 +18,7 @@ const execute: CommandExecute = async (interaction, discordManager) => {
       message: interaction.options.getString(MESSAGE_PARAM)
     }
   }, () => {
-    interaction.reply('Message sent');
+    interaction.reply(ephemeralReply('Message sent'));
   });
 };
 

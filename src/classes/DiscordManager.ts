@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, Interaction, Message, ModalBuilder, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, Interaction, Message, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import SaveData from './SaveData';
 import { channelId$ } from '../commands/set-channel';
 import { bufferTime } from 'rxjs';
@@ -119,6 +119,11 @@ export default class DiscordManager {
   private registerDiscordListeners(): void {
     this.client.once(Events.ClientReady, readyClient => {
       console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+
+    });
+
+    this.client.once(Events.GuildCreate, (guild) => {
+      this.setSlashCommands(guild.id);
     });
   
     this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
@@ -212,6 +217,43 @@ export default class DiscordManager {
     });
   }
 
+  async setSlashCommands(guildId: string): Promise<boolean> {
+    const {CLIENT_ID, DISCORD_TOKEN} = process.env;
+    const commands: Array<RESTPostAPIChatInputApplicationCommandsJSONBody> = [];
+    // Grab all the command folders from the commands directory you created earlier
+    const commandsPath = path.join(__dirname, 'src/commands');
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts'));
+
+    for (const file of commandFiles) {
+    // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
+      const filePath = path.join(commandsPath, file);
+      const command: Command = await import(filePath);
+      if (command.data && command.execute) {
+        commands.push(command.data.toJSON());
+      } else {
+        console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+      }
+    }
+  
+    const rest = new REST().setToken(DISCORD_TOKEN as string);
+  
+    try {
+      console.log(`Started refreshing ${commands.length} application (/) commands.`);
+
+      const data = await rest.put(
+        Routes.applicationGuildCommands(CLIENT_ID as string, guildId),
+        { body: commands },
+      ) as Array<any>;
+  
+      console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+
+    return true;
+  }
+
   private registerRustPlusListeners(): void {
     this.rustPlus.on('message', (message) => {
       if (message?.broadcast?.entityChanged) {
@@ -235,7 +277,7 @@ export default class DiscordManager {
   }
 
   private async loadCommands(): Promise<void> {
-    const commandsPath = path.join(__dirname, 'commands');
+    const commandsPath = path.join(__dirname, 'src/commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts'));
 
     for (const file of commandFiles) {
