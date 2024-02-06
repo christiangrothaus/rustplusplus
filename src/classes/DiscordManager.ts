@@ -19,8 +19,10 @@ export default class DiscordManager {
 
   fcmListener: FcmListener;
 
+  pollingId: NodeJS.Timeout;
+
   constructor(
-    client: Client<boolean>, 
+    client: Client<boolean>,
     rustPlus
   ) {
     this.client = client;
@@ -31,6 +33,7 @@ export default class DiscordManager {
   start(): void {
     this.loadCommands();
     this.loadSaveData();
+    this.fetchAllEntityInfo();
     this.registerListeners();
     this.createConnections();
   }
@@ -38,7 +41,7 @@ export default class DiscordManager {
   refreshMessages(): void {
     const { messages, switches } = this.saveData;
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
-  
+
     messages.forEach((message, entityId) => {
       const switchEntity = switches.get(entityId);
       const existingMessage = channel.messages.cache.get(message.id);
@@ -64,12 +67,12 @@ export default class DiscordManager {
     if(this.fcmListener) {
       this.fcmListener.destroy();
     }
-  
+
     process.exit(1);
   }
 
   async setSlashCommands(guildId: string): Promise<boolean> {
-    const {CLIENT_ID, DISCORD_TOKEN} = process.env;
+    const { CLIENT_ID, DISCORD_TOKEN } = process.env;
     const commands: Array<RESTPostAPIChatInputApplicationCommandsJSONBody> = [];
     // Grab all the command folders from the commands directory you created earlier
     const commandsPath = path.join(__dirname, 'src/commands');
@@ -85,17 +88,17 @@ export default class DiscordManager {
         console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
       }
     }
-  
+
     const rest = new REST().setToken(DISCORD_TOKEN as string);
-  
+
     try {
       console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
       const data = await rest.put(
         Routes.applicationGuildCommands(CLIENT_ID as string, guildId),
-        { body: commands },
+        { body: commands }
       ) as Array<any>;
-  
+
       console.log(`Successfully reloaded ${data.length} application (/) commands.`);
     } catch (error) {
       console.error(error);
@@ -162,74 +165,74 @@ export default class DiscordManager {
     this.client.once(Events.GuildCreate, (guild) => {
       this.setSlashCommands(guild.id);
     });
-  
+
     this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       if(interaction.isButton()) {
         interaction as ButtonInteraction;
-  
+
         const customId = interaction.customId;
         const [entityId, action] = customId.split('-');
         if(action === 'name') {
           const modal = new ModalBuilder()
             .setCustomId(entityId + '-nameChangeModal')
             .setTitle('Change Switch Name');
-  
+
           const nameInput = new TextInputBuilder()
             .setCustomId('newName')
             .setLabel('New Name')
             .setStyle(TextInputStyle.Short);
-  
+
           const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(nameInput);
-  
+
           modal.setComponents(firstActionRow);
-  
+
           await interaction.showModal(modal);
-  
+
           const submitted = await interaction.awaitModalSubmit({
             time: 60000
           });
-  
+
           const newName = submitted.fields.getTextInputValue('newName');
-  
+
           const switchEntity = this.saveData.switches.get(entityId);
-  
+
           switchEntity.customName = newName;
-  
+
           this.refreshMessages();
-  
+
           submitted.deferUpdate();
-  
+
           return;
-        }  
-      
+        }
+
         const switchEntity = this.saveData.switches.get(entityId);
-  
+
         this.rustPlus.getEntityInfo(switchEntity.entityId, () => {
         });
-  
+
         if (action === 'on') {
           this.rustPlus.turnSmartSwitchOn(switchEntity.entityId, () => {
             interaction.deferUpdate();
           });
         } else {
           this.rustPlus.turnSmartSwitchOff(switchEntity.entityId, () => {
-            interaction.deferUpdate();       
+            interaction.deferUpdate();
           });
         }
-  
+
         return;
       }
-  
+
       if (interaction.isChatInputCommand()) {
         interaction as ChatInputCommandInteraction;
-        
-        const command = this.commands.get(interaction.commandName); 
-  
+
+        const command = this.commands.get(interaction.commandName);
+
         if (!command) {
           console.error(`No command matching ${interaction.commandName} was found.`);
           return;
         }
-  
+
         try {
           await command.execute(interaction, this);
         } catch (error) {
@@ -247,10 +250,33 @@ export default class DiscordManager {
       fcmNotifications.forEach((fcmNotification) => {
         this.saveData.switches.set(fcmNotification.entityId, fcmNotification);
       });
-  
+
       if(this.saveData.switches.size && fcmNotifications.length) {
         this.refreshMessages();
       }
+    });
+  }
+
+  private async fetchAllEntityInfo(): Promise<Array<any>> {
+    const switchEntities = this.saveData.switches.keys();
+    const messages: Array<any> = [];
+
+    for (const switchEntityId in switchEntities) {
+      messages.push(await this.fetchEntityInfo(switchEntityId));
+    }
+
+    return messages;
+  }
+
+  private async fetchEntityInfo(switchEntityId: string): Promise<any> {
+    return new Promise<any>((resolve, reject) => {
+      this.rustPlus.getEntityInfo(switchEntityId, (message: any) => {
+        if(message.broadcast) {
+          resolve(message);
+        } else {
+          reject();
+        }
+      });
     });
   }
 
@@ -258,17 +284,17 @@ export default class DiscordManager {
     this.rustPlus.on('message', (message) => {
       if (message?.broadcast?.entityChanged) {
         const entityChange = message.broadcast.entityChanged;
-  
+
         const entityId = entityChange.entityId;
         const active = entityChange.payload.value;
-  
+
         if (this.saveData.switches.get(entityId)) {
           const switchEntity = this.saveData.switches.get(entityId);
           switchEntity.active = active;
         }
       }
     });
-  
+
     channelId$.subscribe((id) => {
       this.saveData.channelId = id;
       this.saveData.save();

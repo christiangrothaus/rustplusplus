@@ -5,7 +5,7 @@ module.exports = {
   },
   'extends': [
     'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended'
   ],
   'overrides': [
     {
@@ -26,12 +26,16 @@ module.exports = {
     'sourceType': 'module'
   },
   'plugins': [
-    '@typescript-eslint'
+    '@typescript-eslint',
+    '@stylistic/ts'
   ],
   'rules': {
     '@typescript-eslint/no-explicit-any': 'off',
-    'indent': ['error', 2],
+    '@stylistic/ts/indent': ['error', 2],
     'semi': ['error', 'always'],
-    'quotes': ['error', 'single']
+    'quotes': ['error', 'single'],
+    '@stylistic/ts/comma-dangle': ['error', 'never'],
+    '@stylistic/ts/object-curly-spacing': ['error', 'always'],
+    'no-trailing-spaces': 'error'
   }
 };
