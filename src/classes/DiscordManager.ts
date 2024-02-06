@@ -248,10 +248,14 @@ export default class DiscordManager {
 
     this.fcmListener.switches$.pipe(bufferTime(200)).subscribe((fcmNotifications) => {
       fcmNotifications.forEach((fcmNotification) => {
+        if(!this.saveData.switches.has(fcmNotification.entityId)) { // If this is a new switch, fetch the entity info so it starts sending messages
+          this.fetchEntityInfo(fcmNotification.entityId);
+        }
+
         this.saveData.switches.set(fcmNotification.entityId, fcmNotification);
       });
 
-      if(this.saveData.switches.size && fcmNotifications.length) {
+      if(this.saveData.switches.size && fcmNotifications.length) { // As long as their is new switches refresh the messages;
         this.refreshMessages();
       }
     });
@@ -288,17 +292,20 @@ export default class DiscordManager {
         const entityId = entityChange.entityId;
         const active = entityChange.payload.value;
 
-        if (this.saveData.switches.get(entityId)) {
+        if (this.saveData.switches.has(entityId)) { // If this is a switch, set it to the active status and refresh the messages
           const switchEntity = this.saveData.switches.get(entityId);
           switchEntity.active = active;
+          this.refreshMessages();
         }
       }
     });
 
-    channelId$.subscribe((id) => {
-      this.saveData.channelId = id;
-      this.saveData.save();
-      this.refreshMessages();
+    channelId$.subscribe((id) => { // When the channel is changed, save the new channel and refresh the messages so they get recreated
+      if (this.saveData.channelId !== id) {
+        this.saveData.channelId = id;
+        this.saveData.save();
+        this.refreshMessages();
+      }
     });
   }
 
