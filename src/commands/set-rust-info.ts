@@ -38,6 +38,8 @@ export const execute: CommandExecute = async (interaction, discordManager) => {
   discordManager.saveData.rustServerHost = host;
   discordManager.saveData.rustServerPort = (port + RUST_PLUS_SERVER_PORT_OFFSET) || RUST_PLUS_SERVER_PORT_DEFAULT;
 
+  discordManager.restart();
+
   interaction.reply(ephemeralReply('Server info set successfully'));
 };
 

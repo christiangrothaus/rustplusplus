@@ -30,6 +30,12 @@ export default class DiscordManager {
     this.createConnections();
   }
 
+  restart(): void {
+    this.saveData.save();
+    this.destroy();
+    this.start();
+  }
+
   refreshMessages(): void {
     const { messages, switches } = this.saveData;
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
