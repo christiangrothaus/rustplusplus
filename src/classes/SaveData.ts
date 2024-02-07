@@ -2,26 +2,30 @@ import * as fs from 'fs';
 import { Message } from 'discord.js';
 import SmartSwitch, { SmartSwitchJSON } from './rust/SmartSwitch';
 
+type SwitchesModel = { [key: string]: SmartSwitch };
+type SwitchesJsonModel = { [key: string]: SmartSwitchJSON };
+type MessagesModel = { [key: string]: Message<boolean> };
+
 type DataToSaveModel = {
-  messages: { [key: string]: Message<boolean> },
-  switches: { [key: string]: SmartSwitch },
+  messages: MessagesModel,
+  switches: SwitchesModel,
   channelId: string,
   rustServerHost: string,
   rustServerPort: number
 }
 
 type SavedDataModel = {
-  messages: { [key: string]: Message<boolean> },
-  switches: { [key: string]: SmartSwitchJSON },
+  messages: MessagesModel,
+  switches: SwitchesJsonModel,
   channelId: string,
   rustServerHost: string,
   rustServerPort: number
 }
 
 export default class SaveData {
-  messages: Map<string, Message<boolean>>;
+  messages: MessagesModel;
 
-  switches: Map<string, SmartSwitch>;
+  switches: SwitchesModel;
 
   channelId: string;
 
@@ -30,12 +34,9 @@ export default class SaveData {
   rustServerPort: number;
 
   save(): void {
-    const messages = Object.fromEntries(this.messages) as { [key: string]: Message<boolean> };
-    const switches = Object.fromEntries(this.switches) as { [key: string]: SmartSwitch };
-
     const data: DataToSaveModel = {
-      messages,
-      switches,
+      messages: this.messages,
+      switches: this.switches,
       channelId: this.channelId,
       rustServerHost: this.rustServerHost,
       rustServerPort: this.rustServerPort
@@ -55,12 +56,14 @@ export default class SaveData {
       const data: string = fs.readFileSync('save.json', 'utf-8');
 
       const saveData: SavedDataModel = JSON.parse(data);
-      this.messages = new Map(Object.entries(saveData.messages));
+      this.messages = saveData.messages;
 
-      const switchEntries = Object.entries(saveData.switches);
-      const switches = switchEntries.map(([key, value]) => [key, new SmartSwitch(value.name, value.entityId, value.isActive)]) as Array<[string, SmartSwitch]>;
+      const switches: SwitchesModel = {};
+      Object.values(saveData.switches).forEach((switchEntry) => {
+        switches[switchEntry.entityId] = new SmartSwitch(switchEntry.name, switchEntry.entityId, switchEntry.isActive);
+      });
 
-      this.switches = new Map(switches);
+      this.switches = switches;
       this.channelId = saveData.channelId;
       this.rustServerHost = saveData.rustServerHost;
       this.rustServerPort = saveData.rustServerPort;

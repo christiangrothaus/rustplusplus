@@ -40,20 +40,20 @@ export default class DiscordManager {
     const { messages, switches } = this.saveData;
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
 
-    messages.forEach((message, entityId) => {
-      const smartSwitch = switches.get(entityId);
+    Object.entries(messages).forEach(([entityId, message]) => {
+      const smartSwitch = switches[entityId];
       const existingMessage = channel.messages.cache.get(message.id);
       if (smartSwitch.name) {
         existingMessage.edit(smartSwitch.name);
       }
     });
 
-    switches.forEach(async (switchEntity) => {
-      const message = messages.get(switchEntity.entityId);
+    Object.values(switches).forEach(async (switchEntity) => {
+      const message = messages[switchEntity.entityId];
 
       if (!message && channel) {
         const message = await this.createSwitchMessage(switchEntity);
-        messages.set(switchEntity.entityId, message);
+        messages[switchEntity.entityId] = message;
       }
     });
 
@@ -192,7 +192,7 @@ export default class DiscordManager {
 
           const newName = submitted.fields.getTextInputValue('newName');
 
-          const smartSwitch = this.saveData.switches.get(entityId);
+          const smartSwitch = this.saveData.switches[entityId];
           smartSwitch.name = newName;
 
           this.refreshMessages();
@@ -202,7 +202,7 @@ export default class DiscordManager {
           return;
         }
 
-        const switchEntity = this.saveData.switches.get(entityId);
+        const switchEntity = this.saveData.switches[entityId];
 
         this.rustPlus.getEntityInfo(switchEntity.entityId);
 
@@ -238,11 +238,11 @@ export default class DiscordManager {
 
     this.fcmListener.switches$.pipe(bufferTime(200)).subscribe((fcmNotifications) => {
       fcmNotifications.forEach((fcmNotification) => {
-        if (!this.saveData.switches.has(fcmNotification.entityId)) { // If this is a new switch, fetch the entity info so it starts sending messages
+        if (!this.saveData.switches[fcmNotification.entityId]) { // If this is a new switch, fetch the entity info so it starts sending messages
           this.rustPlus.getEntityInfo(fcmNotification.entityId);
         }
 
-        this.saveData.switches.set(fcmNotification.entityId, fcmNotification);
+        this.saveData.switches[fcmNotification.entityId] = fcmNotification;
       });
 
       if (this.saveData.switches.size && fcmNotifications.length) { // As long as their is new switches refresh the messages;
@@ -258,7 +258,7 @@ export default class DiscordManager {
   }
 
   private async fetchAllEntityInfo(): Promise<Array<any>> {
-    const switchEntities = this.saveData.switches.keys();
+    const switchEntities = Object.keys(this.saveData.switches);
     const messages: Array<any> = [];
 
     for (const switchEntityId in switchEntities) {
@@ -276,8 +276,8 @@ export default class DiscordManager {
         const entityId = entityChange.entityId as string;
         const active = entityChange.payload.value === 'true';
 
-        if (this.saveData.switches.has(entityId)) { // If this is a switch, set it to the active status and refresh the messages
-          const smartSwitch = this.saveData.switches.get(entityId);
+        if (this.saveData.switches[entityId]) { // If this is a switch, set it to the active status and refresh the messages
+          const smartSwitch = this.saveData.switches[entityId];
           smartSwitch.isActive = active;
           this.refreshMessages();
         }
