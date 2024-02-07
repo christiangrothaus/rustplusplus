@@ -5,13 +5,17 @@ import SmartSwitch, { SmartSwitchJSON } from './rust/SmartSwitch';
 type DataToSaveModel = {
   messages: { [key: string]: Message<boolean> },
   switches: { [key: string]: SmartSwitch },
-  channelId: string
+  channelId: string,
+  rustServerHost: string,
+  rustServerPort: number
 }
 
 type SavedDataModel = {
   messages: { [key: string]: Message<boolean> },
   switches: { [key: string]: SmartSwitchJSON },
-  channelId: string
+  channelId: string,
+  rustServerHost: string,
+  rustServerPort: number
 }
 
 export default class SaveData {
@@ -21,11 +25,21 @@ export default class SaveData {
 
   channelId: string;
 
+  rustServerHost: string;
+
+  rustServerPort: number;
+
   save(): void {
     const messages = Object.fromEntries(this.messages) as { [key: string]: Message<boolean> };
     const switches = Object.fromEntries(this.switches) as { [key: string]: SmartSwitch };
 
-    const data: DataToSaveModel = { messages, switches, channelId: this.channelId };
+    const data: DataToSaveModel = {
+      messages,
+      switches,
+      channelId: this.channelId,
+      rustServerHost: this.rustServerHost,
+      rustServerPort: this.rustServerPort
+    };
 
     const json = JSON.stringify(data);
 
@@ -48,6 +62,8 @@ export default class SaveData {
 
       this.switches = new Map(switches);
       this.channelId = saveData.channelId;
+      this.rustServerHost = saveData.rustServerHost;
+      this.rustServerPort = saveData.rustServerPort;
     } catch (e) {
       console.log('Unable to load save file.', e);
       return false;
