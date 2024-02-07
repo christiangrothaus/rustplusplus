@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, Interaction, Message, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import * as RustPlus from '@liamcottle/rustplus.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import SaveData from './SaveData';
 import { channelId$ } from '../commands/set-channel';
 import { bufferTime } from 'rxjs';
@@ -20,18 +21,8 @@ export default class DiscordManager {
 
   fcmListener: FcmListener;
 
-  pollingId: NodeJS.Timeout;
-
-  constructor(
-    client: Client<boolean>,
-    rustPlus
-  ) {
-    this.client = client;
-    this.rustPlus = rustPlus;
-    this.fcmListener = new FcmListener();
-  }
-
   start(): void {
+    this.initializeClients();
     this.loadCommands();
     this.loadSaveData();
     this.fetchAllEntityInfo();
@@ -259,6 +250,12 @@ export default class DiscordManager {
         this.refreshMessages();
       }
     });
+  }
+
+  private initializeClients(): void {
+    this.fcmListener = new FcmListener();
+    this.client = new Client({ intents: [GatewayIntentBits.Guilds] }),
+    this.rustPlus = new RustPlus('168.100.163.133', '28182', '76561198057625988', process.env.RUST_TOKEN);
   }
 
   private async fetchAllEntityInfo(): Promise<Array<any>> {
