@@ -1,6 +1,7 @@
 import * as push from 'push-receiver';
 import * as fs from 'fs';
 import { Subject } from 'rxjs';
+import SmartSwitch from './rust/SmartSwitch';
 
 
 export type SwitchFcmNotification = {
@@ -17,9 +18,7 @@ export type SwitchFcmNotification = {
   logo: string,
   id: string,
   desc: string,
-  playerId: string,
-  active?: boolean,
-  customName?: string
+  playerId: string
 }
 
 type FcmConfig = {
@@ -45,14 +44,14 @@ type FcmConfig = {
 export default class FcmListener {
   config: FcmConfig;
 
-  switches$ = new Subject<SwitchFcmNotification>();
+  switches$ = new Subject<SmartSwitch>();
 
   listener;
 
   constructor() {
     this.config = this.loadConfig();
 
-    if(!this.config.fcm_credentials){
+    if (!this.config.fcm_credentials){
       console.error('FCM Credentials missing. Please run `fcm-register` first.');
       process.exit(1);
     }
@@ -60,9 +59,10 @@ export default class FcmListener {
 
   async start(): Promise<void> {
     this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
-      const body = JSON.parse(notification.data.body) as SwitchFcmNotification;
-      if(body.entityName === 'Switch') {
-        this.switches$.next(body);
+      const body = JSON.parse(notification.data.body as string) as SwitchFcmNotification;
+      if (body.entityName === 'Switch') {
+        const smartSwitch = new SmartSwitch(body.name, body.entityId);
+        this.switches$.next(smartSwitch);
       }
     });
   }

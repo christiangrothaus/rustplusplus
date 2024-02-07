@@ -5,8 +5,9 @@ import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatIn
 import SaveData from './SaveData';
 import { channelId$ } from '../commands/set-channel';
 import { bufferTime } from 'rxjs';
-import FcmListener, { SwitchFcmNotification } from './FcmListener';
+import FcmListener from './FcmListener';
 import Command from './Command';
+import SmartSwitch from './rust/SmartSwitch';
 
 export default class DiscordManager {
   client: Client<boolean>;
@@ -43,17 +44,17 @@ export default class DiscordManager {
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
 
     messages.forEach((message, entityId) => {
-      const switchEntity = switches.get(entityId);
+      const smartSwitch = switches.get(entityId);
       const existingMessage = channel.messages.cache.get(message.id);
-      if(switchEntity?.customName) {
-        existingMessage.edit(switchEntity.customName);
+      if (smartSwitch.name) {
+        existingMessage.edit(smartSwitch.name);
       }
     });
 
     switches.forEach(async (switchEntity) => {
       const message = messages.get(switchEntity.entityId);
 
-      if(!message && channel) {
+      if (!message && channel) {
         const message = await this.createSwitchMessage(switchEntity);
         messages.set(switchEntity.entityId, message);
       }
@@ -64,7 +65,7 @@ export default class DiscordManager {
   destroy(): void {
     this.saveData.save();
 
-    if(this.fcmListener) {
+    if (this.fcmListener) {
       this.fcmListener.destroy();
     }
 
@@ -108,7 +109,7 @@ export default class DiscordManager {
     return true;
   }
 
-  private async createSwitchMessage(switchEntity: SwitchFcmNotification): Promise<Message> {
+  private async createSwitchMessage(switchEntity: SmartSwitch): Promise<Message> {
     const onButton = new ButtonBuilder()
       .setCustomId(switchEntity.entityId + '-on')
       .setLabel('On')
@@ -128,9 +129,9 @@ export default class DiscordManager {
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
 
     const embded = new EmbedBuilder()
-      .setColor(switchEntity.active ? 0x55ff55 : 0xff5555)
-      .setTitle(switchEntity.customName || switchEntity.name)
-      .addFields({ name: 'Status', value: switchEntity.active ? 'On' : 'Off' })
+      .setColor(switchEntity?.isActive ? 0x55ff55 : 0xff5555)
+      .setTitle(switchEntity.name)
+      .addFields({ name: 'Status', value: switchEntity?.isActive ? 'On' : 'Off' })
       .setTimestamp();
 
     const message = await channel.send({
@@ -167,12 +168,12 @@ export default class DiscordManager {
     });
 
     this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-      if(interaction.isButton()) {
+      if (interaction.isButton()) {
         interaction as ButtonInteraction;
 
         const customId = interaction.customId;
         const [entityId, action] = customId.split('-');
-        if(action === 'name') {
+        if (action === 'name') {
           const modal = new ModalBuilder()
             .setCustomId(entityId + '-nameChangeModal')
             .setTitle('Change Switch Name');
@@ -194,9 +195,8 @@ export default class DiscordManager {
 
           const newName = submitted.fields.getTextInputValue('newName');
 
-          const switchEntity = this.saveData.switches.get(entityId);
-
-          switchEntity.customName = newName;
+          const smartSwitch = this.saveData.switches.get(entityId);
+          smartSwitch.name = newName;
 
           this.refreshMessages();
 
@@ -248,14 +248,14 @@ export default class DiscordManager {
 
     this.fcmListener.switches$.pipe(bufferTime(200)).subscribe((fcmNotifications) => {
       fcmNotifications.forEach((fcmNotification) => {
-        if(!this.saveData.switches.has(fcmNotification.entityId)) { // If this is a new switch, fetch the entity info so it starts sending messages
+        if (!this.saveData.switches.has(fcmNotification.entityId)) { // If this is a new switch, fetch the entity info so it starts sending messages
           this.fetchEntityInfo(fcmNotification.entityId);
         }
 
         this.saveData.switches.set(fcmNotification.entityId, fcmNotification);
       });
 
-      if(this.saveData.switches.size && fcmNotifications.length) { // As long as their is new switches refresh the messages;
+      if (this.saveData.switches.size && fcmNotifications.length) { // As long as their is new switches refresh the messages;
         this.refreshMessages();
       }
     });
@@ -275,7 +275,7 @@ export default class DiscordManager {
   private async fetchEntityInfo(switchEntityId: string): Promise<any> {
     return new Promise<any>((resolve, reject) => {
       this.rustPlus.getEntityInfo(switchEntityId, (message: any) => {
-        if(message.broadcast) {
+        if (message.broadcast) {
           resolve(message);
         } else {
           reject();
@@ -289,12 +289,12 @@ export default class DiscordManager {
       if (message?.broadcast?.entityChanged) {
         const entityChange = message.broadcast.entityChanged;
 
-        const entityId = entityChange.entityId;
-        const active = entityChange.payload.value;
+        const entityId = entityChange.entityId as string;
+        const active = entityChange.payload.value === 'true';
 
         if (this.saveData.switches.has(entityId)) { // If this is a switch, set it to the active status and refresh the messages
-          const switchEntity = this.saveData.switches.get(entityId);
-          switchEntity.active = active;
+          const smartSwitch = this.saveData.switches.get(entityId);
+          smartSwitch.isActive = active;
           this.refreshMessages();
         }
       }

@@ -1,17 +1,17 @@
 import * as fs from 'fs';
 import { Message } from 'discord.js';
-import { SwitchFcmNotification } from './FcmListener';
+import SmartSwitch from './rust/SmartSwitch';
 
 type SavedDataModel = {
   messages: { [key: string]: Message<boolean> },
-  switches: { [key: string]: SwitchFcmNotification },
+  switches: { [key: string]: SmartSwitch },
   channelId: string
 }
 
 export default class SaveData {
   messages: Map<string, Message<boolean>>;
 
-  switches: Map<string, SwitchFcmNotification>;
+  switches: Map<string, SmartSwitch>;
 
   channelId: string;
 
@@ -25,7 +25,7 @@ export default class SaveData {
 
     try {
       fs.writeFileSync('save.json', json, 'utf-8');
-    } catch(e) {
+    } catch (e) {
       console.log('Failed to save data.', e);
     }
   }
@@ -38,7 +38,7 @@ export default class SaveData {
       this.messages = new Map(Object.entries(saveData.messages));
       this.switches = new Map(Object.entries(saveData.switches));
       this.channelId = saveData.channelId;
-    } catch(e) {
+    } catch (e) {
       console.log('Unable to load save file.', e);
       return false;
     }

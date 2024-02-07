@@ -23,19 +23,24 @@ module.exports = {
   'parser': '@typescript-eslint/parser',
   'parserOptions': {
     'ecmaVersion': 'latest',
-    'sourceType': 'module'
+    'sourceType': 'module',
+    'project': './tsconfig.json'
   },
   'plugins': [
     '@typescript-eslint',
-    '@stylistic/ts'
+    '@stylistic/ts',
+    '@stylistic/js'
   ],
   'rules': {
-    '@typescript-eslint/no-explicit-any': 'off',
     '@stylistic/ts/indent': ['error', 2],
     'semi': ['error', 'always'],
     'quotes': ['error', 'single'],
     '@stylistic/ts/comma-dangle': ['error', 'never'],
     '@stylistic/ts/object-curly-spacing': ['error', 'always'],
-    'no-trailing-spaces': 'error'
+    'no-trailing-spaces': 'error',
+    '@stylistic/ts/keyword-spacing': ['error', { 'before': true, 'after': true }],
+    '@stylistic/js/no-multi-spaces': 'error',
+    '@typescript-eslint/no-unsafe-argument': 'error',
+    '@typescript-eslint/no-explicit-any': 'off'
   }
 };
