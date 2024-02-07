@@ -22,9 +22,9 @@ export default class DiscordManager {
   fcmListener: FcmListener;
 
   start(): void {
+    this.loadSaveData();
     this.initializeClients();
     this.loadCommands();
-    this.loadSaveData();
     this.fetchAllEntityInfo();
     this.registerListeners();
     this.createConnections();
@@ -255,7 +255,7 @@ export default class DiscordManager {
   private initializeClients(): void {
     this.fcmListener = new FcmListener();
     this.client = new Client({ intents: [GatewayIntentBits.Guilds] }),
-    this.rustPlus = new RustPlus('168.100.163.133', '28182', '76561198057625988', process.env.RUST_TOKEN);
+    this.rustPlus = new RustPlus(this.saveData.rustServerHost, this.saveData.rustServerPort, '76561198057625988', process.env.RUST_TOKEN);
   }
 
   private async fetchAllEntityInfo(): Promise<Array<any>> {

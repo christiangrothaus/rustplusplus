@@ -4,6 +4,8 @@ import { ephemeralReply } from '../utils/replies';
 
 const SERVER_HOST_FIELD = 'Server Hostname/IP';
 const SERVER_PORT_FIELD = 'Server Port';
+const RUST_PLUS_SERVER_PORT_DEFAULT = 28082;
+const RUST_PLUS_SERVER_PORT_OFFSET = 67;
 
 export const data = new SlashCommandBuilder()
   .setName('setrustinfo')
@@ -18,7 +20,7 @@ export const data = new SlashCommandBuilder()
       .setDescription('The port of the server (default 28015)');
   });
 
-export const execute: CommandExecute = async (interaction) => {
+export const execute: CommandExecute = async (interaction, discordManager) => {
   const host = interaction.options.getString(SERVER_HOST_FIELD);
   const port = interaction.options.getNumber(SERVER_PORT_FIELD);
 
@@ -27,10 +29,14 @@ export const execute: CommandExecute = async (interaction) => {
     return;
   }
 
+
   if (port && (port < 1 || port > 65535)) {
     interaction.reply(ephemeralReply('Invalid port number'));
     return;
   }
+
+  discordManager.saveData.rustServerHost = host;
+  discordManager.saveData.rustServerPort = (port + RUST_PLUS_SERVER_PORT_OFFSET) || RUST_PLUS_SERVER_PORT_DEFAULT;
 
   interaction.reply(ephemeralReply('Server info set successfully'));
 };
