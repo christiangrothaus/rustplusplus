@@ -1,6 +1,7 @@
 {   
-  "compilerOptions": {     
-    "allowJs": true   
+  "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true
   },
-  "esModuleInterop": true
+  "include": [ "src", "index.ts"]
 }

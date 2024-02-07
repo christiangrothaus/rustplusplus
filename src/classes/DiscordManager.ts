@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as RustPlus from '@liamcottle/rustplus.js';
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import SaveData from './SaveData';
 import { channelId$ } from '../commands/set-channel';
@@ -9,11 +8,12 @@ import { bufferTime } from 'rxjs';
 import FcmListener from './FcmListener';
 import Command from './Command';
 import SmartSwitch from './rust/SmartSwitch';
+import RustPlusWrapper from './RustPlusWrapper';
 
 export default class DiscordManager {
   client: Client<boolean>;
 
-  rustPlus;
+  rustPlus: RustPlusWrapper;
 
   saveData = new SaveData();
 
@@ -204,18 +204,11 @@ export default class DiscordManager {
 
         const switchEntity = this.saveData.switches.get(entityId);
 
-        this.rustPlus.getEntityInfo(switchEntity.entityId, () => {
-        });
+        this.rustPlus.getEntityInfo(switchEntity.entityId);
 
-        if (action === 'on') {
-          this.rustPlus.turnSmartSwitchOn(switchEntity.entityId, () => {
-            interaction.deferUpdate();
-          });
-        } else {
-          this.rustPlus.turnSmartSwitchOff(switchEntity.entityId, () => {
-            interaction.deferUpdate();
-          });
-        }
+        await this.rustPlus.toggleSmartSwitch(switchEntity.entityId, action === 'on');
+
+        interaction.deferUpdate();
 
         return;
       }
@@ -246,7 +239,7 @@ export default class DiscordManager {
     this.fcmListener.switches$.pipe(bufferTime(200)).subscribe((fcmNotifications) => {
       fcmNotifications.forEach((fcmNotification) => {
         if (!this.saveData.switches.has(fcmNotification.entityId)) { // If this is a new switch, fetch the entity info so it starts sending messages
-          this.fetchEntityInfo(fcmNotification.entityId);
+          this.rustPlus.getEntityInfo(fcmNotification.entityId);
         }
 
         this.saveData.switches.set(fcmNotification.entityId, fcmNotification);
@@ -261,7 +254,7 @@ export default class DiscordManager {
   private initializeClients(): void {
     this.fcmListener = new FcmListener();
     this.client = new Client({ intents: [GatewayIntentBits.Guilds] }),
-    this.rustPlus = new RustPlus(this.saveData.rustServerHost, this.saveData.rustServerPort, '76561198057625988', process.env.RUST_TOKEN);
+    this.rustPlus = new RustPlusWrapper(this.saveData.rustServerHost, this.saveData.rustServerPort);
   }
 
   private async fetchAllEntityInfo(): Promise<Array<any>> {
@@ -269,26 +262,14 @@ export default class DiscordManager {
     const messages: Array<any> = [];
 
     for (const switchEntityId in switchEntities) {
-      messages.push(await this.fetchEntityInfo(switchEntityId));
+      messages.push(await this.rustPlus.getEntityInfo(switchEntityId));
     }
 
     return messages;
   }
 
-  private async fetchEntityInfo(switchEntityId: string): Promise<any> {
-    return new Promise<any>((resolve, reject) => {
-      this.rustPlus.getEntityInfo(switchEntityId, (message: any) => {
-        if (message.broadcast) {
-          resolve(message);
-        } else {
-          reject();
-        }
-      });
-    });
-  }
-
   private registerRustPlusListeners(): void {
-    this.rustPlus.on('message', (message) => {
+    this.rustPlus.onEntityChange((message) => {
       if (message?.broadcast?.entityChanged) {
         const entityChange = message.broadcast.entityChanged;
 
