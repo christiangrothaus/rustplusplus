@@ -1,10 +1,16 @@
 import * as fs from 'fs';
 import { Message } from 'discord.js';
-import SmartSwitch from './rust/SmartSwitch';
+import SmartSwitch, { SmartSwitchJSON } from './rust/SmartSwitch';
+
+type DataToSaveModel = {
+  messages: { [key: string]: Message<boolean> },
+  switches: { [key: string]: SmartSwitch },
+  channelId: string
+}
 
 type SavedDataModel = {
   messages: { [key: string]: Message<boolean> },
-  switches: { [key: string]: SmartSwitch },
+  switches: { [key: string]: SmartSwitchJSON },
   channelId: string
 }
 
@@ -16,10 +22,10 @@ export default class SaveData {
   channelId: string;
 
   save(): void {
-    const messages = Object.fromEntries(this.messages);
-    const switches = Object.fromEntries(this.switches);
+    const messages = Object.fromEntries(this.messages) as { [key: string]: Message<boolean> };
+    const switches = Object.fromEntries(this.switches) as { [key: string]: SmartSwitch };
 
-    const data: SavedDataModel = { messages, switches, channelId: this.channelId };
+    const data: DataToSaveModel = { messages, switches, channelId: this.channelId };
 
     const json = JSON.stringify(data);
 
@@ -36,7 +42,11 @@ export default class SaveData {
 
       const saveData: SavedDataModel = JSON.parse(data);
       this.messages = new Map(Object.entries(saveData.messages));
-      this.switches = new Map(Object.entries(saveData.switches));
+
+      const switchEntries = Object.entries(saveData.switches);
+      const switches = switchEntries.map(([key, value]) => [key, new SmartSwitch(value.name, value.entityId, value.isActive)]) as Array<[string, SmartSwitch]>;
+
+      this.switches = new Map(switches);
       this.channelId = saveData.channelId;
     } catch (e) {
       console.log('Unable to load save file.', e);

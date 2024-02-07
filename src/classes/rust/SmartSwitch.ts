@@ -1,3 +1,9 @@
+export type SmartSwitchJSON = {
+  name: string,
+  entityId: string,
+  isActive?: boolean
+}
+
 export default class SmartSwitch {
 
   name: string;
@@ -12,5 +18,9 @@ export default class SmartSwitch {
     this.entityId = entityId;
 
     this.isActive = isActive;
+  }
+
+  toJSON(): SmartSwitchJSON {
+    return { name: this.name, entityId: this.entityId, isActive: this.isActive };
   }
 }
