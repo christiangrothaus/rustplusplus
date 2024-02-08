@@ -1,6 +1,5 @@
 import * as push from 'push-receiver';
 import * as fs from 'fs';
-import { Subject } from 'rxjs';
 import SmartSwitch from './rust/SmartSwitch';
 
 
@@ -21,7 +20,9 @@ export type SwitchFcmNotification = {
   playerId: string
 }
 
-type FcmConfig = {
+type NewSwitchCallback = (smartSwitch: SmartSwitch) => void;
+
+type PushConfig = {
   fcm_credentials: {
     keys: {
       privateKey: string,
@@ -41,12 +42,12 @@ type FcmConfig = {
   }
 }
 
-export default class FcmListener {
-  config: FcmConfig;
-
-  switches$ = new Subject<SmartSwitch>();
+export default class PushListener {
+  config: PushConfig;
 
   listener;
+
+  private newSwitchCallbacks: Array<NewSwitchCallback> = [];
 
   constructor() {
     this.config = this.loadConfig();
@@ -57,12 +58,16 @@ export default class FcmListener {
     }
   }
 
+  onNewSwitch(callback: NewSwitchCallback): void {
+    this.newSwitchCallbacks.push(callback);
+  }
+
   async start(): Promise<void> {
     this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
       const body = JSON.parse(notification.data.body as string) as SwitchFcmNotification;
       if (body.entityName === 'Switch') {
         const smartSwitch = new SmartSwitch(body.name, body.entityId);
-        this.switches$.next(smartSwitch);
+        this.newSwitchCallbacks.forEach((callback) => callback(smartSwitch));
       }
     });
   }
@@ -71,7 +76,7 @@ export default class FcmListener {
     this.listener.destroy();
   }
 
-  private loadConfig(): FcmConfig | undefined {
+  private loadConfig(): PushConfig | undefined {
     try {
       return JSON.parse(fs.readFileSync('rustplus.config.json', 'utf-8'));
     } catch (err) {

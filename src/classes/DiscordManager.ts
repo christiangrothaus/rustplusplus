@@ -3,9 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import SaveData from './SaveData';
-import { channelId$ } from '../commands/set-channel';
-import { bufferTime } from 'rxjs';
-import FcmListener from './FcmListener';
+import PushListener from './FcmListener';
 import Command from './Command';
 import SmartSwitch from './rust/SmartSwitch';
 import RustPlusWrapper from './RustPlusWrapper';
@@ -19,7 +17,7 @@ export default class DiscordManager {
 
   commands = new Collection<string, Command>();
 
-  fcmListener: FcmListener;
+  fcmListener: PushListener;
 
   start(): void {
     this.loadSaveData();
@@ -236,23 +234,18 @@ export default class DiscordManager {
       }
     });
 
-    this.fcmListener.switches$.pipe(bufferTime(200)).subscribe((fcmNotifications) => {
-      fcmNotifications.forEach((fcmNotification) => {
-        if (!this.saveData.switches[fcmNotification.entityId]) { // If this is a new switch, fetch the entity info so it starts sending messages
-          this.rustPlus.getEntityInfo(fcmNotification.entityId);
-        }
-
-        this.saveData.switches[fcmNotification.entityId] = fcmNotification;
-      });
-
-      if (this.saveData.switches.size && fcmNotifications.length) { // As long as their is new switches refresh the messages;
-        this.refreshMessages();
+    this.fcmListener.onNewSwitch((smartSwitch) => {
+      if (!this.saveData.switches[smartSwitch.entityId]) { // If this is a new switch, fetch the entity info so it starts sending messages
+        this.rustPlus.getEntityInfo(smartSwitch.entityId);
       }
+
+      this.saveData.switches[smartSwitch.entityId] = smartSwitch;
+      this.refreshMessages();
     });
   }
 
   private initializeClients(): void {
-    this.fcmListener = new FcmListener();
+    this.fcmListener = new PushListener();
     this.client = new Client({ intents: [GatewayIntentBits.Guilds] }),
     this.rustPlus = new RustPlusWrapper(this.saveData.rustServerHost, this.saveData.rustServerPort);
   }
@@ -284,12 +277,8 @@ export default class DiscordManager {
       }
     });
 
-    channelId$.subscribe((id) => { // When the channel is changed, save the new channel and refresh the messages so they get recreated
-      if (this.saveData.channelId !== id) {
-        this.saveData.channelId = id;
-        this.saveData.save();
-        this.refreshMessages();
-      }
+    this.saveData.onChanelIdChange(() => {
+      this.refreshMessages();
     });
   }
 

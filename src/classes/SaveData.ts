@@ -5,6 +5,7 @@ import SmartSwitch, { SmartSwitchJSON } from './rust/SmartSwitch';
 type SwitchesModel = { [key: string]: SmartSwitch };
 type SwitchesJsonModel = { [key: string]: SmartSwitchJSON };
 type MessagesModel = { [key: string]: Message<boolean> };
+type ChannelChangeCallbackModel = (channelId: string) => void;
 
 type DataToSaveModel = {
   messages: MessagesModel,
@@ -27,11 +28,27 @@ export default class SaveData {
 
   switches: SwitchesModel;
 
-  channelId: string;
-
   rustServerHost: string;
 
   rustServerPort: number;
+
+  set channelId(channelId: string) {
+    this._channelId = channelId;
+    this.save();
+    this.channelIdChangeCallbacks.forEach((callback) => callback(channelId));
+  }
+
+  get channelId(): string {
+    return this._channelId;
+  }
+
+  private _channelId: string;
+
+  private channelIdChangeCallbacks: Array<ChannelChangeCallbackModel> = [];
+
+  onChanelIdChange(callback: ChannelChangeCallbackModel): void {
+    this.channelIdChangeCallbacks.push(callback);
+  }
 
   save(): void {
     const data: DataToSaveModel = {
