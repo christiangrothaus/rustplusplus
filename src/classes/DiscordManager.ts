@@ -1,13 +1,13 @@
 import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import SaveData from './SaveData';
 import PushListener from './PushListener';
 import Command from './Command';
-import SmartSwitch from './rust/SmartSwitch';
 import RustPlusWrapper from './RustPlusWrapper';
-import { ephemeralReply } from '../utils/replies';
+import { ephemeralReply } from '../utils/messages';
+import SmartSwitchMessage from './discord/SmartSwitchMessage';
 
 export default class DiscordManager {
   client: Client<boolean>;
@@ -41,7 +41,7 @@ export default class DiscordManager {
 
     Object.entries(messages).forEach(([entityId, message]) => {
       const smartSwitch = switches[entityId];
-      const existingMessage = channel.messages.cache.get(message.id);
+      const existingMessage = channel.messages.cache.get(message.messageId);
       if (smartSwitch.name) {
         existingMessage.edit(smartSwitch.name);
       }
@@ -51,8 +51,9 @@ export default class DiscordManager {
       const message = messages[switchEntity.entityId];
 
       if (!message && channel) {
-        const message = await this.createSwitchMessage(switchEntity);
-        messages[switchEntity.entityId] = message;
+        const smartSwitchMessage = new SmartSwitchMessage(switchEntity.entityId, this.saveData.channelId);
+        messages[switchEntity.entityId] = smartSwitchMessage;
+        await smartSwitchMessage.create(this);
       }
     });
 
@@ -103,44 +104,6 @@ export default class DiscordManager {
     }
 
     return true;
-  }
-
-  private async createSwitchMessage(switchEntity: SmartSwitch): Promise<Message> {
-    const onButton = new ButtonBuilder()
-      .setCustomId(switchEntity.entityId + '-on')
-      .setLabel('On')
-      .setStyle(ButtonStyle.Success);
-
-    const offButton = new ButtonBuilder()
-      .setCustomId(switchEntity.entityId + '-off')
-      .setLabel('Off')
-      .setStyle(ButtonStyle.Danger);
-
-    const nameButton = new ButtonBuilder()
-      .setCustomId(switchEntity.entityId + '-name')
-      .setLabel('Name')
-      .setStyle(ButtonStyle.Primary);
-
-    const refreshButton = new ButtonBuilder()
-      .setCustomId(switchEntity.entityId + '-refresh')
-      .setLabel('Refresh')
-      .setStyle(ButtonStyle.Secondary);
-
-    const row = new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, nameButton, refreshButton);
-    const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
-
-    const embed = new EmbedBuilder()
-      .setColor(switchEntity?.isActive ? 0x55ff55 : 0xff5555)
-      .setTitle(switchEntity.name)
-      .addFields({ name: 'Status', value: switchEntity?.isActive ? 'On' : 'Off' })
-      .setTimestamp();
-
-    const message = await channel.send({
-      embeds: [embed],
-      components: [row]
-    });
-
-    return message;
   }
 
   private loadSaveData(): void {

@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Command, { CommandExecute } from '../classes/Command';
-import { ephemeralReply } from '../utils/replies';
+import { ephemeralReply } from '../utils/messages';
 
 export const data = new SlashCommandBuilder()
   .setName('refreshcommands')

@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Command, { CommandExecute } from '../classes/Command';
-import { ephemeralReply } from '../utils/replies';
+import { ephemeralReply } from '../utils/messages';
 
 const SERVER_HOST_FIELD = 'Server Hostname/IP';
 const SERVER_PORT_FIELD = 'Server Port';
