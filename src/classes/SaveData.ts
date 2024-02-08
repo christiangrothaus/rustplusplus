@@ -5,14 +5,14 @@ type SwitchesModel = { [key: string]: SmartSwitch };
 type SwitchesJsonModel = { [key: string]: SmartSwitchJSON };
 export type ChannelChangeCallbackModel = (channelId: string) => void;
 
-type DataToSaveModel = {
+export type DataToSaveModel = {
   switches: SwitchesModel,
   channelId: string,
   rustServerHost: string,
   rustServerPort: number
 }
 
-type SavedDataModel = {
+export type SavedDataModel = {
   switches: SwitchesJsonModel,
   channelId: string,
   rustServerHost: string,
@@ -67,8 +67,8 @@ export default class SaveData {
       const saveData: SavedDataModel = JSON.parse(data);
 
       const switches: SwitchesModel = {};
-      Object.values(saveData.switches).forEach((switchEntry) => {
-        switches[switchEntry.entityId] = new SmartSwitch(switchEntry.name, switchEntry.entityId, switchEntry.isActive);
+      Object.values(saveData.switches).forEach((smartSwitch) => {
+        switches[smartSwitch.entityId] = new SmartSwitch(smartSwitch.name, smartSwitch.entityId, smartSwitch.isActive, smartSwitch.messageId);
       });
 
       this.switches = switches;
