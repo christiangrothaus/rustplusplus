@@ -7,6 +7,7 @@ import PushListener from './PushListener';
 import Command from './Command';
 import SmartSwitch from './rust/SmartSwitch';
 import RustPlusWrapper from './RustPlusWrapper';
+import { ephemeralReply } from '../utils/replies';
 
 export default class DiscordManager {
   client: Client<boolean>;
@@ -120,7 +121,12 @@ export default class DiscordManager {
       .setLabel('Name')
       .setStyle(ButtonStyle.Primary);
 
-    const row = new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, nameButton);
+    const refreshButton = new ButtonBuilder()
+      .setCustomId(switchEntity.entityId + '-refresh')
+      .setLabel('Refresh')
+      .setStyle(ButtonStyle.Secondary);
+
+    const row = new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, nameButton, refreshButton);
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
 
     const embed = new EmbedBuilder()
@@ -168,45 +174,58 @@ export default class DiscordManager {
 
         const customId = interaction.customId;
         const [entityId, action] = customId.split('-');
-        if (action === 'name') {
-          const modal = new ModalBuilder()
-            .setCustomId(entityId + '-nameChangeModal')
-            .setTitle('Change Switch Name');
+        switch (action) {
+          case 'name': {
+            const modal = new ModalBuilder()
+              .setCustomId(entityId + '-nameChangeModal')
+              .setTitle('Change Switch Name');
 
-          const nameInput = new TextInputBuilder()
-            .setCustomId('newName')
-            .setLabel('New Name')
-            .setStyle(TextInputStyle.Short);
+            const nameInput = new TextInputBuilder()
+              .setCustomId('newName')
+              .setLabel('New Name')
+              .setStyle(TextInputStyle.Short);
 
-          const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(nameInput);
+            const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(nameInput);
 
-          modal.setComponents(firstActionRow);
+            modal.setComponents(firstActionRow);
 
-          await interaction.showModal(modal);
+            await interaction.showModal(modal);
 
-          const submitted = await interaction.awaitModalSubmit({
-            time: 60000
-          });
+            const submitted = await interaction.awaitModalSubmit({
+              time: 60000
+            });
 
-          const newName = submitted.fields.getTextInputValue('newName');
+            const newName = submitted.fields.getTextInputValue('newName');
 
-          const smartSwitch = this.saveData.switches[entityId];
-          smartSwitch.name = newName;
+            const smartSwitch = this.saveData.switches[entityId];
+            smartSwitch.name = newName;
 
-          this.refreshMessages();
+            this.refreshMessages();
 
-          submitted.deferUpdate();
+            submitted.reply(ephemeralReply('Name changed!'));
 
-          return;
+            break;
+          }
+          case 'on':
+          case 'off': {
+            const switchEntity = this.saveData.switches[entityId];
+
+            this.rustPlus.getEntityInfo(switchEntity.entityId);
+
+            await this.rustPlus.toggleSmartSwitch(switchEntity.entityId, action === 'on');
+
+            interaction.reply(ephemeralReply(`${switchEntity.name} switched ${action}!`));
+
+            break;
+          }
+          case 'refresh': {
+            const smartSwitch = this.saveData.switches[entityId];
+            this.rustPlus.getEntityInfo(smartSwitch.entityId);
+            this.refreshMessages();
+            interaction.reply(ephemeralReply('Message refreshed!'));
+            break;
+          }
         }
-
-        const switchEntity = this.saveData.switches[entityId];
-
-        this.rustPlus.getEntityInfo(switchEntity.entityId);
-
-        await this.rustPlus.toggleSmartSwitch(switchEntity.entityId, action === 'on');
-
-        interaction.deferUpdate();
 
         return;
       }
