@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import SmartSwitch from './rust/SmartSwitch';
 
 
-export type SwitchFcmNotification = {
+export type SwitchPushNotification = {
   img: string,
   entityType: string,
   ip: string,
@@ -64,7 +64,7 @@ export default class PushListener {
 
   async start(): Promise<void> {
     this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
-      const body = JSON.parse(notification.data.body as string) as SwitchFcmNotification;
+      const body = JSON.parse(notification.data.body as string) as SwitchPushNotification;
       if (body.entityName === 'Switch') {
         const smartSwitch = new SmartSwitch(body.name, body.entityId);
         this.newSwitchCallbacks.forEach((callback) => callback(smartSwitch));

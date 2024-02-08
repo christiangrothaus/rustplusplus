@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, Client, Collection, EmbedBuilder, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import SaveData from './SaveData';
-import PushListener from './FcmListener';
+import PushListener from './PushListener';
 import Command from './Command';
 import SmartSwitch from './rust/SmartSwitch';
 import RustPlusWrapper from './RustPlusWrapper';
@@ -17,7 +17,7 @@ export default class DiscordManager {
 
   commands = new Collection<string, Command>();
 
-  fcmListener: PushListener;
+  pushListener: PushListener;
 
   start(): void {
     this.loadSaveData();
@@ -60,8 +60,8 @@ export default class DiscordManager {
   destroy(): void {
     this.saveData.save();
 
-    if (this.fcmListener) {
-      this.fcmListener.destroy();
+    if (this.pushListener) {
+      this.pushListener.destroy();
     }
 
     process.exit(1);
@@ -143,7 +143,7 @@ export default class DiscordManager {
 
   private createConnections(): void {
     this.client.login(process.env.DISCORD_TOKEN);
-    this.fcmListener.start();
+    this.pushListener.start();
     this.rustPlus.connect();
   }
 
@@ -234,7 +234,7 @@ export default class DiscordManager {
       }
     });
 
-    this.fcmListener.onNewSwitch((smartSwitch) => {
+    this.pushListener.onNewSwitch((smartSwitch) => {
       if (!this.saveData.switches[smartSwitch.entityId]) { // If this is a new switch, fetch the entity info so it starts sending messages
         this.rustPlus.getEntityInfo(smartSwitch.entityId);
       }
@@ -245,7 +245,7 @@ export default class DiscordManager {
   }
 
   private initializeClients(): void {
-    this.fcmListener = new PushListener();
+    this.pushListener = new PushListener();
     this.client = new Client({ intents: [GatewayIntentBits.Guilds] }),
     this.rustPlus = new RustPlusWrapper(this.saveData.rustServerHost, this.saveData.rustServerPort);
   }
