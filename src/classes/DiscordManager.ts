@@ -123,14 +123,14 @@ export default class DiscordManager {
     const row = new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, nameButton);
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
 
-    const embded = new EmbedBuilder()
+    const embed = new EmbedBuilder()
       .setColor(switchEntity?.isActive ? 0x55ff55 : 0xff5555)
       .setTitle(switchEntity.name)
       .addFields({ name: 'Status', value: switchEntity?.isActive ? 'On' : 'Off' })
       .setTimestamp();
 
     const message = await channel.send({
-      embeds: [embded],
+      embeds: [embed],
       components: [row]
     });
 
