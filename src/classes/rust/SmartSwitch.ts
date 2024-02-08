@@ -1,4 +1,4 @@
-import { ActionRowBuilder, BaseMessageOptions, ButtonBuilder, ButtonStyle, MessageCreateOptions } from 'discord.js';
+import { ActionRowBuilder, BaseMessageOptions, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { newSmartSwitchEmbed } from '../../utils/messages';
 
 export type SmartSwitchJSON = {
