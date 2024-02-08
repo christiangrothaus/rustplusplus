@@ -1,15 +1,11 @@
 import * as fs from 'fs';
 import SmartSwitch, { SmartSwitchJSON } from './rust/SmartSwitch';
-import SmartSwitchMessage from './discord/SmartSwitchMessage';
 
 type SwitchesModel = { [key: string]: SmartSwitch };
 type SwitchesJsonModel = { [key: string]: SmartSwitchJSON };
-type MessagesModel = { [key: string]: SmartSwitchMessage };
-type MessagesJsonModel = { [key: string]: SmartSwitchMessage };
-type ChannelChangeCallbackModel = (channelId: string) => void;
+export type ChannelChangeCallbackModel = (channelId: string) => void;
 
 type DataToSaveModel = {
-  messages: MessagesModel,
   switches: SwitchesModel,
   channelId: string,
   rustServerHost: string,
@@ -17,7 +13,6 @@ type DataToSaveModel = {
 }
 
 type SavedDataModel = {
-  messages: MessagesJsonModel,
   switches: SwitchesJsonModel,
   channelId: string,
   rustServerHost: string,
@@ -25,8 +20,6 @@ type SavedDataModel = {
 }
 
 export default class SaveData {
-  messages: MessagesModel;
-
   switches: SwitchesModel;
 
   rustServerHost: string;
@@ -53,7 +46,6 @@ export default class SaveData {
 
   save(): void {
     const data: DataToSaveModel = {
-      messages: this.messages,
       switches: this.switches,
       channelId: this.channelId,
       rustServerHost: this.rustServerHost,
@@ -77,11 +69,6 @@ export default class SaveData {
       const switches: SwitchesModel = {};
       Object.values(saveData.switches).forEach((switchEntry) => {
         switches[switchEntry.entityId] = new SmartSwitch(switchEntry.name, switchEntry.entityId, switchEntry.isActive);
-      });
-
-      const messages: MessagesModel = {};
-      Object.values(saveData.messages).forEach((message) => {
-        messages[message.messageId] = new SmartSwitchMessage(message.smartSwitchId, message.channelId, message.messageId);
       });
 
       this.switches = switches;

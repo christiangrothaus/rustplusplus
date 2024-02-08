@@ -7,7 +7,6 @@ import PushListener from './PushListener';
 import Command from './Command';
 import RustPlusWrapper from './RustPlusWrapper';
 import { ephemeralReply } from '../utils/messages';
-import SmartSwitchMessage from './discord/SmartSwitchMessage';
 
 export default class DiscordManager {
   client: Client<boolean>;
@@ -36,24 +35,18 @@ export default class DiscordManager {
   }
 
   refreshMessages(): void {
-    const { messages, switches } = this.saveData;
+    const { switches } = this.saveData;
     const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
 
-    Object.entries(messages).forEach(([entityId, message]) => {
-      const smartSwitch = switches[entityId];
-      const existingMessage = channel.messages.cache.get(message.messageId);
-      if (smartSwitch.name) {
-        existingMessage.edit(smartSwitch.name);
-      }
-    });
-
-    Object.values(switches).forEach(async (switchEntity) => {
-      const message = messages[switchEntity.entityId];
-
-      if (!message && channel) {
-        const smartSwitchMessage = new SmartSwitchMessage(switchEntity.entityId, this.saveData.channelId);
-        messages[switchEntity.entityId] = smartSwitchMessage;
-        await smartSwitchMessage.create(this);
+    Object.values(switches).forEach(async (smartSwitch) => {
+      if (channel) {
+        if (!smartSwitch.messageId) {
+          const message = await channel.send(smartSwitch.toEmbedMessage());
+          smartSwitch.messageId = message.id;
+        } else {
+          const message = await channel.messages.cache.get(smartSwitch.messageId);
+          message.edit(smartSwitch.toEmbedMessage());
+        }
       }
     });
 
