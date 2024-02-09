@@ -50,7 +50,7 @@ export default class SmartSwitch {
       .setStyle(ButtonStyle.Secondary);
 
     const row = new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, nameButton, refreshButton);
-    const embed = newSmartSwitchEmbed(this.name, this.isActive);
+    const embed = newSmartSwitchEmbed(this.name, this.entityId, this.isActive);
 
     return {
       embeds: [embed],

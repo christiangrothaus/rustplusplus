@@ -5,10 +5,11 @@ export const ephemeralReply = (content: string): InteractionReplyOptions => {
   return reply;
 };
 
-export const newSmartSwitchEmbed = (name: string, isActive?: boolean): EmbedBuilder => {
+export const newSmartSwitchEmbed = (name: string, entityId: string, isActive?: boolean): EmbedBuilder => {
   return new EmbedBuilder()
     .setColor(isActive ? 0x55ff55 : 0xff5555)
     .setTitle(name)
     .addFields({ name: 'Status', value: isActive ? 'On' : 'Off' })
+    .setFooter({ text:  entityId })
     .setTimestamp();
 };
