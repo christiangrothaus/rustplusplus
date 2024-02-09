@@ -53,7 +53,7 @@ export default class DiscordManager {
   }
 
   destroy(): void {
-    this.saveData.save();
+    this.saveData?.save();
 
     if (this.pushListener) {
       this.pushListener.destroy();
@@ -270,7 +270,15 @@ export default class DiscordManager {
   }
 
   private registerSaveDataListeners(): void {
-    this.saveData.onChanelIdChange(() => {
+    this.saveData.onChanelIdChange((oldId) => {
+      if (this.saveData.switches) {
+        Object.values(this.saveData.switches).forEach((smartSwitch) => {
+          const oldChannel = this.client.channels.cache.get(oldId) as TextChannel;
+          oldChannel.messages.cache.get(smartSwitch.messageId)?.delete().then(() => {
+            delete this.saveData.switches[smartSwitch.entityId];
+          });
+        });
+      }
       this.refreshMessages();
     });
   }

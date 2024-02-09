@@ -4,7 +4,7 @@ import { SAVE_DATA_PATH } from '../..';
 
 type SwitchesModel = { [key: string]: SmartSwitch };
 type SwitchesJsonModel = { [key: string]: SmartSwitchJSON };
-export type ChannelChangeCallbackModel = (channelId: string) => void;
+export type ChannelChangeCallbackModel = (oldChannelId: string, channelId: string) => void;
 
 export type DataToSaveModel = {
   switches: SwitchesModel,
@@ -32,8 +32,11 @@ export default class SaveData {
   guildId: string;
 
   set channelId(channelId: string) {
+    const oldChannelId = this._channelId;
     this._channelId = channelId;
-    this.channelIdChangeCallbacks.forEach((callback) => callback(channelId));
+    if (oldChannelId !== channelId) {
+      this.channelIdChangeCallbacks.forEach((callback) => callback(oldChannelId, channelId));
+    }
   }
 
   get channelId(): string {
