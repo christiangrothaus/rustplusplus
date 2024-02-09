@@ -7,7 +7,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Sets the channel to be used');
 
 export const execute: CommandExecute = async (interaction, discordManager) => {
-  discordManager.saveData.channelId = interaction.channelId;
+  discordManager.state.channelId = interaction.channelId;
 
   interaction.reply(ephemeralReply('Switches being created')).then(message => {
     setTimeout(() => message.delete(), 5000);

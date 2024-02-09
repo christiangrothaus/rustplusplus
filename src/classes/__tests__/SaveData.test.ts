@@ -1,4 +1,4 @@
-import SaveData from '../SaveData';
+import State from '../State';
 import fs from 'fs';
 import SmartSwitch from '../rust/SmartSwitch';
 
@@ -11,14 +11,14 @@ const SWITCHES = { [SWITCH_ID]: new SmartSwitch('test', SWITCH_ID, true, '1234')
 const RUST_SERVER_HOST = 'localhost';
 const RUST_SERVER_PORT = 25565;
 
-let saveData: SaveData;
+let saveData: State;
 
 describe('SaveData', () => {
   beforeEach(() => {
     jest.spyOn(fs, 'readFileSync').mockImplementation(mockReadFileSync);
     jest.spyOn(fs, 'writeFileSync').mockImplementation(mockWriteFileSync);
 
-    saveData = new SaveData();
+    saveData = new State();
 
     saveData.channelId = CHANNEL_ID;
     saveData.switches = SWITCHES;
@@ -28,13 +28,13 @@ describe('SaveData', () => {
   });
 
   it('should create a new SaveData', () => {
-    const saveData = new SaveData();
+    const saveData = new State();
 
     expect(saveData).toBeDefined();
   });
 
   it('should set channelId', () => {
-    const saveData = new SaveData();
+    const saveData = new State();
     const channelId = '1234';
 
     saveData.channelId = channelId;

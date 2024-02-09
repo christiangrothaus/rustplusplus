@@ -2,7 +2,7 @@ import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
-import SaveData from './SaveData';
+import State from './State';
 import PushListener from './PushListener';
 import Command from './Command';
 import RustPlusWrapper from './RustPlusWrapper';
@@ -13,14 +13,14 @@ export default class DiscordManager {
 
   rustPlus: RustPlusWrapper;
 
-  saveData = new SaveData();
+  state = new State();
 
   commands = new Collection<string, Command>();
 
   pushListener: PushListener;
 
   start(): void {
-    this.loadSaveData();
+    this.loadState();
     this.initializeClients();
     this.loadCommands();
     this.fetchAllEntityInfo();
@@ -29,14 +29,14 @@ export default class DiscordManager {
   }
 
   restart(): void {
-    this.saveData.save();
+    this.state.save();
     this.destroy();
     this.start();
   }
 
   refreshMessages(): void {
-    const { switches } = this.saveData;
-    const channel = this.client.channels.cache.get(this.saveData.channelId) as TextChannel;
+    const { switches } = this.state;
+    const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
 
     Object.values(switches).forEach(async (smartSwitch) => {
       if (channel) {
@@ -53,7 +53,7 @@ export default class DiscordManager {
   }
 
   destroy(): void {
-    this.saveData?.save();
+    this.state?.save();
 
     if (this.pushListener) {
       this.pushListener.destroy();
@@ -99,8 +99,8 @@ export default class DiscordManager {
     return true;
   }
 
-  private loadSaveData(): void {
-    this.saveData.loadFromSave();
+  private loadState(): void {
+    this.state.loadFromSave();
   }
 
   private createConnections(): void {
@@ -114,18 +114,18 @@ export default class DiscordManager {
   private registerListeners(): void {
     this.registerDiscordListeners();
     this.registerRustPlusListeners();
-    this.registerSaveDataListeners();
+    this.registerStateListeners();
   }
 
   private registerDiscordListeners(): void {
     this.client.once(Events.ClientReady, readyClient => {
       console.log(`Ready! Logged in as ${readyClient.user.tag}`);
-      this.setSlashCommands(this.saveData.guildId);
+      this.setSlashCommands(this.state.guildId);
     });
 
     this.client.once(Events.GuildCreate, (guild) => {
       this.setSlashCommands(guild.id);
-      this.saveData.guildId = guild.id;
+      this.state.guildId = guild.id;
     });
 
     this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
@@ -157,7 +157,7 @@ export default class DiscordManager {
 
             const newName = submitted.fields.getTextInputValue('newName');
 
-            const smartSwitch = this.saveData.switches[entityId];
+            const smartSwitch = this.state.switches[entityId];
             smartSwitch.name = newName;
 
             this.refreshMessages();
@@ -170,7 +170,7 @@ export default class DiscordManager {
           }
           case 'on':
           case 'off': {
-            const switchEntity = this.saveData.switches[entityId];
+            const switchEntity = this.state.switches[entityId];
 
             this.rustPlus.getEntityInfo(switchEntity.entityId);
 
@@ -183,7 +183,7 @@ export default class DiscordManager {
             break;
           }
           case 'refresh': {
-            const smartSwitch = this.saveData.switches[entityId];
+            const smartSwitch = this.state.switches[entityId];
             this.rustPlus.getEntityInfo(smartSwitch.entityId);
             this.refreshMessages();
             interaction.reply(ephemeralReply('Message refreshed!')).then(message => {
@@ -220,26 +220,26 @@ export default class DiscordManager {
     });
 
     this.pushListener.onNewSwitch((smartSwitch) => {
-      if (!this.saveData.switches[smartSwitch.entityId]) { // If this is a new switch, fetch the entity info so it starts sending messages
+      if (!this.state.switches[smartSwitch.entityId]) { // If this is a new switch, fetch the entity info so it starts sending messages
         this.rustPlus.getEntityInfo(smartSwitch.entityId);
       }
 
-      this.saveData.switches[smartSwitch.entityId] = smartSwitch;
+      this.state.switches[smartSwitch.entityId] = smartSwitch;
       this.refreshMessages();
     });
   }
 
   private initializeClients(): void {
     this.pushListener = new PushListener();
-    this.rustPlus = new RustPlusWrapper(this.saveData.rustServerHost, this.saveData.rustServerPort);
+    this.rustPlus = new RustPlusWrapper(this.state.rustServerHost, this.state.rustServerPort);
     this.client = new Client({ intents: [GatewayIntentBits.Guilds] });
   }
 
   private async fetchAllEntityInfo(): Promise<Array<any>> {
     const messages: Array<any> = [];
 
-    if (this.saveData.switches) {
-      const switchEntities = Object.keys(this.saveData.switches);
+    if (this.state.switches) {
+      const switchEntities = Object.keys(this.state.switches);
 
 
       for (const switchEntityId in switchEntities) {
@@ -259,8 +259,8 @@ export default class DiscordManager {
           const entityId = entityChange.entityId as string;
           const active = entityChange.payload.value === 'true';
 
-          if (this.saveData.switches[entityId]) { // If this is a switch, set it to the active status and refresh the messages
-            const smartSwitch = this.saveData.switches[entityId];
+          if (this.state.switches[entityId]) { // If this is a switch, set it to the active status and refresh the messages
+            const smartSwitch = this.state.switches[entityId];
             smartSwitch.isActive = active;
             this.refreshMessages();
           }
@@ -269,13 +269,13 @@ export default class DiscordManager {
     }
   }
 
-  private registerSaveDataListeners(): void {
-    this.saveData.onChanelIdChange((oldId) => {
-      if (this.saveData.switches) {
-        Object.values(this.saveData.switches).forEach((smartSwitch) => {
+  private registerStateListeners(): void {
+    this.state.onChanelIdChange((oldId) => {
+      if (this.state.switches) {
+        Object.values(this.state.switches).forEach((smartSwitch) => {
           const oldChannel = this.client.channels.cache.get(oldId) as TextChannel;
           oldChannel.messages.cache.get(smartSwitch.messageId)?.delete().then(() => {
-            delete this.saveData.switches[smartSwitch.entityId];
+            delete this.state.switches[smartSwitch.entityId];
           });
         });
       }

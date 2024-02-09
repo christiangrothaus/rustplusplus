@@ -22,7 +22,7 @@ export type SavedDataModel = {
   guildId: string
 }
 
-export default class SaveData {
+export default class State {
   switches: SwitchesModel = {};
 
   rustServerHost: string;

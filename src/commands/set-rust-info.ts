@@ -34,10 +34,10 @@ export const execute: CommandExecute = async (interaction, discordManager) => {
       interaction.reply(ephemeralReply('Invalid port number'));
       return;
     }
-    discordManager.saveData.rustServerPort = port + RUST_PLUS_SERVER_PORT_OFFSET;
+    discordManager.state.rustServerPort = port + RUST_PLUS_SERVER_PORT_OFFSET;
   }
 
-  discordManager.saveData.rustServerHost = host;
+  discordManager.state.rustServerHost = host;
   discordManager.restart();
 
   interaction.reply(ephemeralReply('Server info set successfully'));
