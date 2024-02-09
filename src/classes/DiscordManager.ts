@@ -66,7 +66,7 @@ export default class DiscordManager {
     const { CLIENT_ID, DISCORD_TOKEN } = process.env;
     const commands: Array<RESTPostAPIChatInputApplicationCommandsJSONBody> = [];
     // Grab all the command folders from the commands directory you created earlier
-    const commandsPath = path.join(__dirname, 'src/commands');
+    const commandsPath = path.join(__dirname, '../commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts'));
 
     for (const file of commandFiles) {
@@ -106,22 +106,26 @@ export default class DiscordManager {
   private createConnections(): void {
     this.client.login(process.env.DISCORD_TOKEN);
     this.pushListener.start();
-    this.rustPlus.connect();
+    if (this.rustPlus.serverHost && this.rustPlus.serverPort) {
+      this.rustPlus.connect();
+    }
   }
 
   private registerListeners(): void {
     this.registerDiscordListeners();
     this.registerRustPlusListeners();
+    this.registerSaveDataListeners();
   }
 
   private registerDiscordListeners(): void {
     this.client.once(Events.ClientReady, readyClient => {
       console.log(`Ready! Logged in as ${readyClient.user.tag}`);
-
+      this.setSlashCommands(this.saveData.guildId);
     });
 
     this.client.once(Events.GuildCreate, (guild) => {
       this.setSlashCommands(guild.id);
+      this.saveData.guildId = guild.id;
     });
 
     this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
@@ -221,44 +225,52 @@ export default class DiscordManager {
 
   private initializeClients(): void {
     this.pushListener = new PushListener();
-    this.client = new Client({ intents: [GatewayIntentBits.Guilds] }),
     this.rustPlus = new RustPlusWrapper(this.saveData.rustServerHost, this.saveData.rustServerPort);
+    this.client = new Client({ intents: [GatewayIntentBits.Guilds] });
   }
 
   private async fetchAllEntityInfo(): Promise<Array<any>> {
-    const switchEntities = Object.keys(this.saveData.switches);
     const messages: Array<any> = [];
 
-    for (const switchEntityId in switchEntities) {
-      messages.push(await this.rustPlus.getEntityInfo(switchEntityId));
+    if (this.saveData.switches) {
+      const switchEntities = Object.keys(this.saveData.switches);
+
+
+      for (const switchEntityId in switchEntities) {
+        messages.push(await this.rustPlus.getEntityInfo(switchEntityId));
+      }
     }
 
     return messages;
   }
 
   private registerRustPlusListeners(): void {
-    this.rustPlus.onEntityChange((message) => {
-      if (message?.broadcast?.entityChanged) {
-        const entityChange = message.broadcast.entityChanged;
+    if (this.rustPlus.hasClient()) {
+      this.rustPlus.onEntityChange((message) => {
+        if (message?.broadcast?.entityChanged) {
+          const entityChange = message.broadcast.entityChanged;
 
-        const entityId = entityChange.entityId as string;
-        const active = entityChange.payload.value === 'true';
+          const entityId = entityChange.entityId as string;
+          const active = entityChange.payload.value === 'true';
 
-        if (this.saveData.switches[entityId]) { // If this is a switch, set it to the active status and refresh the messages
-          const smartSwitch = this.saveData.switches[entityId];
-          smartSwitch.isActive = active;
-          this.refreshMessages();
+          if (this.saveData.switches[entityId]) { // If this is a switch, set it to the active status and refresh the messages
+            const smartSwitch = this.saveData.switches[entityId];
+            smartSwitch.isActive = active;
+            this.refreshMessages();
+          }
         }
-      }
-    });
+      });
+    }
+  }
 
+  private registerSaveDataListeners(): void {
     this.saveData.onChanelIdChange(() => {
       this.refreshMessages();
     });
   }
 
   private async loadCommands(): Promise<void> {
-    const commandsPath = path.join(__dirname, 'src/commands');
+    const commandsPath = path.join(__dirname, '../commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts'));
 
     for (const file of commandFiles) {
