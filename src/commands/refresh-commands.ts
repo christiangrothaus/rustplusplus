@@ -10,9 +10,13 @@ export const execute: CommandExecute = async (interaction, discordManager) => {
   const success = await discordManager.setSlashCommands(interaction.guildId);
 
   if (success) {
-    interaction.reply(ephemeralReply('Commands successfully refreshed'));
+    interaction.reply(ephemeralReply('Commands successfully refreshed')).then(message => {
+      setTimeout(() => message.delete(), 5000);
+    });
   } else {
-    interaction.reply(ephemeralReply('Commands failed to refresh'));
+    interaction.reply(ephemeralReply('Commands failed to refresh')).then(message => {
+      setTimeout(() => message.delete(), 5000);
+    });
   }
 };
 

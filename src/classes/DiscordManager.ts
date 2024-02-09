@@ -162,7 +162,9 @@ export default class DiscordManager {
 
             this.refreshMessages();
 
-            submitted.reply(ephemeralReply('Name changed!'));
+            submitted.reply(ephemeralReply('Name changed!')).then(message => {
+              setTimeout(() => message.delete(), 5000);
+            });
 
             break;
           }
@@ -174,7 +176,9 @@ export default class DiscordManager {
 
             await this.rustPlus.toggleSmartSwitch(switchEntity.entityId, action === 'on');
 
-            interaction.reply(ephemeralReply(`${switchEntity.name} switched ${action}!`));
+            interaction.reply(ephemeralReply(`${switchEntity.name} switched ${action}!`)).then(message => {
+              setTimeout(() => message.delete(), 5000);
+            });
 
             break;
           }
@@ -182,7 +186,9 @@ export default class DiscordManager {
             const smartSwitch = this.saveData.switches[entityId];
             this.rustPlus.getEntityInfo(smartSwitch.entityId);
             this.refreshMessages();
-            interaction.reply(ephemeralReply('Message refreshed!'));
+            interaction.reply(ephemeralReply('Message refreshed!')).then(message => {
+              setTimeout(() => message.delete(), 5000);
+            });
             break;
           }
         }
