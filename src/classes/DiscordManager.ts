@@ -93,7 +93,7 @@ export default class DiscordManager {
 
   private initializeRustPlus(): void {
     if (this.state.rustServerHost) {
-      this.rustPlus = new RustPlusWrapper(this.state.rustServerHost, this.state?.rustServerPort);
+      this.rustPlus = new RustPlusWrapper(this.state.rustServerHost, this.state.rustToken, this.state?.rustServerPort);
       this.rustPlus.connect();
       this.registerRustPlusListeners();
     }

@@ -8,7 +8,8 @@ export type DataToSaveModel = {
   messages: EntityMessages,
   rustServerHost: string,
   rustServerPort: number,
-  guildId: string
+  guildId: string,
+  rustToken: string
 }
 
 export type SavedDataModel = {
@@ -16,6 +17,7 @@ export type SavedDataModel = {
   rustServerHost: string,
   rustServerPort: number,
   guildId: string,
+  rustToken: string,
   messages: EntityMessages
 }
 
@@ -28,6 +30,8 @@ export default class State {
   rustServerPort: number;
 
   guildId: string;
+
+  rustToken: string;
 
   messages: EntityMessages = {};
 
@@ -57,7 +61,8 @@ export default class State {
       rustServerHost: this.rustServerHost,
       rustServerPort: this.rustServerPort,
       guildId: this.guildId,
-      messages: this.messages
+      messages: this.messages,
+      rustToken: this.rustToken
     };
 
     const json = JSON.stringify(data);
@@ -79,6 +84,7 @@ export default class State {
       this.rustServerHost = saveData.rustServerHost;
       this.rustServerPort = saveData.rustServerPort;
       this.guildId = saveData.guildId;
+      this.rustToken = saveData.rustToken;
 
       console.log('Loaded save!');
     } catch (e) {

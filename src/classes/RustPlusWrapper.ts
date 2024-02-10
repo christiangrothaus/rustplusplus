@@ -11,25 +11,31 @@ export default class RustPlusWrapper {
 
   serverPort: number;
 
+  rustToken: string;
+
   private client: RustPlus;
 
   private entityChangeCallbacks: Array<(message: EntityChanged) => void> = [];
 
   private connectedCallbacks: Array<() => void> = [];
 
-  constructor(serverHost: string, serverPort?: number) {
+  constructor(serverHost: string, rustToken: string, serverPort?: number) {
     this.serverHost = serverHost;
     this.serverPort = serverPort || RUST_PLUS_SERVER_PORT_DEFAULT;
+    this.rustToken = rustToken;
   }
 
   public connect(): void {
-    this.client = new RustPlus(this.serverHost, this.serverPort, process.env.STEAM_ID, process.env.RUST_TOKEN);
+    this.client = new RustPlus(this.serverHost, this.serverPort, process.env.STEAM_ID, this.rustToken);
     this.client.connect();
     this.registerListeners();
   }
 
   public async getEntityInfo(entityId: string): Promise<any> {
-    if (!this.client) { return; }
+    if (!this.client) {
+      console.log('Failed to get entity info. Client not connected.');
+      return;
+    }
     return new Promise((resolve) => {
       this.client.getEntityInfo(entityId, (message: Message) => {
         resolve(message);
