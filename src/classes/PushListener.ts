@@ -1,6 +1,5 @@
 import * as push from 'push-receiver';
 import * as fs from 'fs';
-import SmartSwitch from './rust/SmartSwitch';
 
 
 export type SwitchPushNotification = {
@@ -20,7 +19,7 @@ export type SwitchPushNotification = {
   playerId: string
 }
 
-type NewSwitchCallback = (smartSwitch: SmartSwitch) => void;
+type NewSwitchCallback = (smartSwitch: SwitchPushNotification) => void;
 
 type PushConfig = {
   fcm_credentials: {
@@ -66,8 +65,7 @@ export default class PushListener {
     this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
       const body = JSON.parse(notification.data.body as string) as SwitchPushNotification;
       if (body.entityName === 'Switch') {
-        const smartSwitch = new SmartSwitch(body.entityName, body.entityId);
-        this.newSwitchCallbacks.forEach((callback) => callback(smartSwitch));
+        this.newSwitchCallbacks.forEach((callback) => callback(body));
       }
     });
   }

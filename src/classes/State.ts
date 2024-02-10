@@ -1,35 +1,35 @@
 import * as fs from 'fs';
-import SmartSwitch, { SmartSwitchJSON } from './rust/SmartSwitch';
 import { SAVE_DATA_PATH } from '../..';
 
-type SwitchesModel = { [key: string]: SmartSwitch };
-type SwitchesJsonModel = { [key: string]: SmartSwitchJSON };
 export type ChannelChangeCallbackModel = (oldChannelId: string, channelId: string) => void;
 
 export type DataToSaveModel = {
-  switches: SwitchesModel,
   channelId: string,
+  messages: EntityMessages,
   rustServerHost: string,
   rustServerPort: number,
   guildId: string
 }
 
 export type SavedDataModel = {
-  switches: SwitchesJsonModel,
   channelId: string,
   rustServerHost: string,
   rustServerPort: number,
-  guildId: string
+  guildId: string,
+  messages: EntityMessages
 }
 
-export default class State {
-  switches: SwitchesModel = {};
+// {messageId: entityId}
+export type EntityMessages = { [key: string]: string };
 
+export default class State {
   rustServerHost: string;
 
   rustServerPort: number;
 
   guildId: string;
+
+  messages: EntityMessages = {};
 
   set channelId(channelId: string) {
     const oldChannelId = this._channelId;
@@ -52,13 +52,12 @@ export default class State {
   }
 
   save(): void {
-    console.log('Saving data ----------------------');
     const data: DataToSaveModel = {
-      switches: this.switches,
       channelId: this.channelId,
       rustServerHost: this.rustServerHost,
       rustServerPort: this.rustServerPort,
-      guildId: this.guildId
+      guildId: this.guildId,
+      messages: this.messages
     };
 
     const json = JSON.stringify(data);
@@ -75,19 +74,13 @@ export default class State {
       const data: string = fs.readFileSync(SAVE_DATA_PATH, 'utf-8');
       const saveData: SavedDataModel = JSON.parse(data);
 
-      const switches: SwitchesModel = {};
-      if (saveData.switches) {
-        Object.values(saveData.switches).forEach((smartSwitch) => {
-          switches[smartSwitch.entityId] = new SmartSwitch(smartSwitch.name, smartSwitch.entityId, smartSwitch.isActive, smartSwitch.messageId);
-        });
-      }
-
-
-      this.switches = switches;
+      this.messages = saveData.messages || {};
       this.channelId = saveData.channelId;
       this.rustServerHost = saveData.rustServerHost;
       this.rustServerPort = saveData.rustServerPort;
       this.guildId = saveData.guildId;
+
+      console.log('Loaded save!');
     } catch (e) {
       if (e.code === 'ENOENT') {
         return false;
