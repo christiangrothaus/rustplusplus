@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import RustPlus from '@liamcottle/rustplus.js';
+import { EntityChanged, Message } from '../models/RustPlus.models';
 
 export const RUST_PLUS_SERVER_PORT_DEFAULT = 28082;
 export const RUST_PLUS_SERVER_PORT_OFFSET = 67;
@@ -12,7 +13,7 @@ export default class RustPlusWrapper {
 
   private client: RustPlus;
 
-  private entityChangeCallbacks: Array<(message: any) => void> = [];
+  private entityChangeCallbacks: Array<(message: EntityChanged) => void> = [];
 
   private connectedCallbacks: Array<() => void> = [];
 
@@ -30,9 +31,8 @@ export default class RustPlusWrapper {
   public async getEntityInfo(entityId: string): Promise<any> {
     if (!this.client) { return; }
     return new Promise((resolve) => {
-      this.client.getEntityInfo(entityId, (message) => {
+      this.client.getEntityInfo(entityId, (message: Message) => {
         resolve(message);
-        return true;
       });
     });
   }
@@ -41,7 +41,7 @@ export default class RustPlusWrapper {
     if (!this.client) { return; }
     return new Promise((resolve, reject) => {
       if (on) {
-        this.client.turnSmartSwitchOn(entityId, (message) => {
+        this.client.turnSmartSwitchOn(entityId, (message: Message) => {
           const error = this.getErrorMessage(message);
           console.log(error);
           if (error) {
@@ -50,7 +50,7 @@ export default class RustPlusWrapper {
           resolve(message);
         });
       } else {
-        this.client.turnSmartSwitchOff(entityId, (message) => {
+        this.client.turnSmartSwitchOff(entityId, (message: Message) => {
           const error = this.getErrorMessage(message);
           if (error) {
             reject(error);
@@ -78,15 +78,14 @@ export default class RustPlusWrapper {
       this.connectedCallbacks.forEach((callback) => callback());
     });
 
-    this.client.on('message', (msg) => {
-      console.log('message received: ' + JSON.stringify(msg));
+    this.client.on('message', (msg: Message) => {
       if (msg?.broadcast?.entityChanged) {
-        this.entityChangeCallbacks.forEach((callback) => callback(msg));
+        this.entityChangeCallbacks.forEach((callback) => callback(msg?.broadcast?.entityChanged));
       }
     });
   }
 
-  private getErrorMessage(message): string | undefined {
+  private getErrorMessage(message: Message): string | undefined {
     const error = message?.response?.error?.error;
 
     switch (error) {

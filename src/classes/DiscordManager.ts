@@ -7,6 +7,7 @@ import PushListener, { SwitchPushNotification } from './PushListener';
 import Command from './Command';
 import RustPlusWrapper from './RustPlusWrapper';
 import { createSmartSwitchButtonRow, createSmartSwitchEmbed, ephemeralReply, getMessageEmbed, updateMessageName, updateMessageStatus } from '../utils/messages';
+import { Message as RustMessage } from '../models/RustPlus.models';
 
 export default class DiscordManager {
   client: Client<boolean>;
@@ -156,10 +157,9 @@ export default class DiscordManager {
             const entityId = embed.footer?.text;
             const entityName = embed.title;
 
-            this.rustPlus.getEntityInfo(entityId);
-
             try {
               await this.rustPlus.toggleSmartSwitch(entityId, action === 'on');
+              this.rustPlus.getEntityInfo(entityId);
             } catch (error) {
               interaction.reply(ephemeralReply(error as string)).then(message => {
                 setTimeout(() => message.delete(), 5000);
@@ -236,18 +236,17 @@ export default class DiscordManager {
         this.fetchAllEntityInfo();
       });
 
-      this.rustPlus.onEntityChange((response) => {
-        if (response?.broadcast?.entityChanged) {
-          const entityChange = response.broadcast.entityChanged;
+      this.rustPlus.onEntityChange((msg: RustMessage) => {
+        const entityChange = msg?.broadcast?.entityChanged;
 
-          const entityId = entityChange.entityId as string;
+        const entityId = entityChange?.entityId;
 
-          const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
-          const message = channel.messages.cache.find((msg) => {
-            const embed = msg.embeds[0];
-            return embed.footer?.text === entityId;
-          });
-
+        const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
+        const message = channel.messages.cache.find((msg) => {
+          const embed = msg.embeds[0];
+          return embed.footer?.text === entityId;
+        });
+        if (message) {
           updateMessageStatus(message, entityChange);
         }
       });
@@ -274,11 +273,12 @@ export default class DiscordManager {
       const hasExistingMessage = messages.findIndex((entityId) => {
         return entityId === switchPushNotification.entityId;
       }) !== -1;
-      console.log(hasExistingMessage);
-      if (!hasExistingMessage) {
-        const message = await this.sendEntityMessage(switchPushNotification);
-        this.state.messages[message.id] = switchPushNotification.entityId;
-      }
+
+      if (hasExistingMessage) { return; }
+
+      const message = await this.sendEntityMessage(switchPushNotification);
+      this.rustPlus.getEntityInfo(switchPushNotification.entityId);
+      this.state.messages[message.id] = switchPushNotification.entityId;
     });
   }
 
