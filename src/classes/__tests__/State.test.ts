@@ -1,63 +1,57 @@
 import State from '../State';
 import fs from 'fs';
-import SmartSwitch from '../rust/SmartSwitch';
 
 const mockReadFileSync = jest.fn();
 const mockWriteFileSync = jest.fn();
 
 const CHANNEL_ID = '3972311231';
-const SWITCH_ID = '4321';
-const SWITCHES = { [SWITCH_ID]: new SmartSwitch('test', SWITCH_ID, true, '1234') };
 const RUST_SERVER_HOST = 'localhost';
 const RUST_SERVER_PORT = 25565;
 
-let saveData: State;
+let state: State;
 
-describe('SaveData', () => {
+describe('state', () => {
   beforeEach(() => {
     jest.spyOn(fs, 'readFileSync').mockImplementation(mockReadFileSync);
     jest.spyOn(fs, 'writeFileSync').mockImplementation(mockWriteFileSync);
 
-    saveData = new State();
+    state = new State();
 
-    saveData.channelId = CHANNEL_ID;
-    saveData.switches = SWITCHES;
-    saveData.rustServerHost = RUST_SERVER_HOST;
-    saveData.rustServerPort = RUST_SERVER_PORT;
+    state.channelId = CHANNEL_ID;
+    state.rustServerHost = RUST_SERVER_HOST;
+    state.rustServerPort = RUST_SERVER_PORT;
 
   });
 
-  it('should create a new SaveData', () => {
-    const saveData = new State();
+  it('should create a new state', () => {
+    const state = new State();
 
-    expect(saveData).toBeDefined();
+    expect(state).toBeDefined();
   });
 
   it('should set channelId', () => {
-    const saveData = new State();
+    const state = new State();
     const channelId = '1234';
 
-    saveData.channelId = channelId;
+    state.channelId = channelId;
 
-    expect(saveData.channelId).toBe(channelId);
+    expect(state.channelId).toBe(channelId);
   });
 
   it('should save data', () => {
     const expected = JSON.stringify({
-      switches: SWITCHES,
       channelId: CHANNEL_ID,
       rustServerHost: RUST_SERVER_HOST,
       rustServerPort: RUST_SERVER_PORT
     });
 
-    saveData.save();
+    state.save();
 
     expect(fs.writeFileSync).toHaveBeenCalledWith('save.json', expected, 'utf-8');
   });
 
   it('should load data from save', () => {
     const expected = {
-      switches: { [SWITCH_ID]: SWITCHES[SWITCH_ID].toJSON() },
       channelId: CHANNEL_ID,
       rustServerHost: RUST_SERVER_HOST,
       rustServerPort: RUST_SERVER_PORT
@@ -65,12 +59,11 @@ describe('SaveData', () => {
 
     mockReadFileSync.mockReturnValue(JSON.stringify(expected));
 
-    const result = saveData.loadFromSave();
+    const result = state.loadFromSave();
 
     expect(result).toBe(true);
-    expect(saveData.switches).toEqual(SWITCHES);
-    expect(saveData.channelId).toBe(CHANNEL_ID);
-    expect(saveData.rustServerHost).toBe(RUST_SERVER_HOST);
-    expect(saveData.rustServerPort).toBe(RUST_SERVER_PORT);
+    expect(state.channelId).toBe(CHANNEL_ID);
+    expect(state.rustServerHost).toBe(RUST_SERVER_HOST);
+    expect(state.rustServerPort).toBe(RUST_SERVER_PORT);
   });
 });
