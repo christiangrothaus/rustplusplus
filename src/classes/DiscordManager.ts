@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import State from './State';
 import PushListener, { SwitchPushNotification } from './PushListener';
 import Command from './Command';
@@ -138,19 +138,6 @@ export default class DiscordManager {
 
             await interaction.showModal(modal);
 
-            interaction.deferReply({ ephemeral: true });
-
-            const submitted = await interaction.awaitModalSubmit({
-              time: 60000
-            });
-
-            const newName = submitted.fields.getTextInputValue('newName');
-            updateMessage(interaction.message, newName);
-
-            submitted.reply('Name changed!').then(message => {
-              setTimeout(() => message.delete(), 5000);
-            });
-
             break;
           }
           case 'on':
@@ -159,27 +146,27 @@ export default class DiscordManager {
             const entityId = embed.footer?.text;
             const entityName = embed.title;
 
-            interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ ephemeral: true, fetchReply: true });
 
             try {
               await this.rustPlus.toggleSmartSwitch(entityId, action === 'on');
               this.rustPlus.getEntityInfo(entityId);
             } catch (error) {
               if (typeof error === 'string') {
-                interaction.reply(error).then(message => {
-                  setTimeout(() => message.delete(), 5000);
+                interaction.editReply(error).then(() => {
+                  setTimeout(() => interaction.deleteReply(), 5000);
                 });
               } else {
-                interaction.reply('An unkown error occured').then(message => {
-                  setTimeout(() => message.delete(), 5000);
+                interaction.editReply('An unkown error occured').then(() => {
+                  setTimeout(() => interaction.deleteReply(), 5000);
                 });
               }
 
               break;
             }
 
-            interaction.reply(ephemeralReply(`${entityName} switched ${action}!`)).then(message => {
-              setTimeout(() => message.delete(), 5000);
+            interaction.editReply(`${entityName} switched ${action}!`).then(() => {
+              setTimeout(() => interaction.deleteReply(), 5000);
             });
 
             break;
@@ -199,6 +186,16 @@ export default class DiscordManager {
         return;
       }
 
+      if (interaction.isModalSubmit()) {
+        interaction as ModalSubmitInteraction;
+
+        const newName = interaction.fields.getTextInputValue('newName');
+        updateMessage(interaction.message, null, newName);
+
+        interaction.reply(ephemeralReply('Message updated')).then(message => {
+          setTimeout(() => message.delete(), 5000);
+        });
+      }
       if (interaction.isChatInputCommand()) {
         interaction as ChatInputCommandInteraction;
 
