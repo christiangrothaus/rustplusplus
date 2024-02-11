@@ -6,7 +6,6 @@ export const ephemeralReply = (content: string): InteractionReplyOptions => {
 };
 
 export const createSmartSwitchEmbed = (name: string, entityId: string, isActive?: boolean, imageUrl?: string): EmbedBuilder => {
-  console.log({ isActive });
   const embedBuilder = new EmbedBuilder()
     .setColor(isActive ? 0x55ff55 : 0xff5555)
     .addFields({ name: 'Status', value: isActive ? 'On' : 'Off' })
