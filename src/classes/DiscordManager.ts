@@ -252,12 +252,14 @@ export default class DiscordManager {
       this.rustPlus.onEntityChange(async (entityChange: EntityChanged) => {
         const entityId = entityChange?.entityId;
 
-        const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
+        const channel = await this.client.channels.fetch(this.state.channelId) as TextChannel;
         const messages = await channel.messages.fetch();
+
         const message = messages.find((msg) => {
           const embed = msg.embeds[0];
           return embed.footer?.text === `${entityId}`;
         });
+
         if (message) {
           updateMessageStatus(message, entityChange);
         }
