@@ -20,12 +20,15 @@ export default class DiscordManager {
 
   pushListener: PushListener;
 
+  private rustPlusKeepAliveId: NodeJS.Timeout;
+
   async start(): Promise<void> {
     this.loadState();
     await this.initializeClients();
     this.loadCommands();
     this.registerStateListeners();
     this.registerPushListeners();
+    this.startRustPlusKeepAlive();
   }
 
   restart(): void {
@@ -36,6 +39,8 @@ export default class DiscordManager {
 
   destroy(): void {
     this.state.save();
+
+    clearInterval(this.rustPlusKeepAliveId);
 
     if (this.pushListener) {
       this.pushListener.destroy();
@@ -316,5 +321,11 @@ export default class DiscordManager {
       embeds: [createSmartSwitchEmbed(entityName, entityId)],
       components: [createSmartSwitchButtonRow(entityId)]
     });
+  }
+
+  private startRustPlusKeepAlive(): void {
+    this.rustPlusKeepAliveId = setInterval(() => {
+      this.fetchAllEntityInfo();
+    }, 5 * 60 * 1000);
   }
 }
