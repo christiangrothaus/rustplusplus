@@ -249,13 +249,13 @@ export default class DiscordManager {
         this.fetchAllEntityInfo();
       });
 
-      this.rustPlus.onEntityChange((entityChange: EntityChanged) => {
+      this.rustPlus.onEntityChange(async (entityChange: EntityChanged) => {
         const entityId = entityChange?.entityId;
 
         const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
-        const message = channel.messages.cache.find((msg) => {
+        const messages = await channel.messages.fetch();
+        const message = messages.find((msg) => {
           const embed = msg.embeds[0];
-          console.log(embed, entityId);
           return embed.footer?.text === `${entityId}`;
         });
         if (message) {
