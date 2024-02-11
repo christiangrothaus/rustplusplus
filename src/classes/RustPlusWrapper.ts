@@ -46,8 +46,12 @@ export default class RustPlusWrapper {
   public async toggleSmartSwitch(entityId: string, on: boolean): Promise<any> {
     if (!this.client) { return; }
     return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject('Request timed out');
+      }, 3000);
       if (on) {
         this.client.turnSmartSwitchOn(entityId, (message: Message) => {
+          clearTimeout(timeoutId);
           const error = this.getErrorMessage(message);
           if (error) {
             reject(error);
@@ -56,6 +60,7 @@ export default class RustPlusWrapper {
         });
       } else {
         this.client.turnSmartSwitchOff(entityId, (message: Message) => {
+          clearTimeout(timeoutId);
           const error = this.getErrorMessage(message);
           if (error) {
             reject(error);
