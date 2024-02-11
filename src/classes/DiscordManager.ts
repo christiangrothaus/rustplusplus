@@ -35,7 +35,7 @@ export default class DiscordManager {
   }
 
   destroy(): void {
-    this.state?.save();
+    this.state.save();
 
     if (this.pushListener) {
       this.pushListener.destroy();

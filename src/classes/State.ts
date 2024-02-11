@@ -64,7 +64,6 @@ export default class State {
       messages: this.messages,
       rustToken: this.rustToken
     };
-
     const json = JSON.stringify(data);
 
     try {
@@ -88,9 +87,6 @@ export default class State {
 
       console.log('Loaded save!');
     } catch (e) {
-      if (e.code === 'ENOENT') {
-        return false;
-      }
       console.log('Unable to load save file.', e);
       return false;
     }
