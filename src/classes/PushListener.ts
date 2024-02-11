@@ -64,7 +64,6 @@ export default class PushListener {
   async start(): Promise<void> {
     this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
       const body = JSON.parse(notification.data.body as string) as SwitchPushNotification;
-      console.log(body);
       if (body.entityName === 'Switch') {
         this.newSwitchCallbacks.forEach((callback) => callback(body));
       }

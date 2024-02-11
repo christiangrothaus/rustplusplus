@@ -2,31 +2,31 @@
 export type EntityType = 'Switch' | 'Alarm' | 'StorageMonitor'
 
 export type TeamInfoMember = {
-  steamId: string,
+  steamId: number,
   name: string,
-  x: string,
-  y: string,
+  x: number,
+  y: number,
   isOnline: boolean,
-  spawnTime: string,
+  spawnTime: number,
   isAlive: boolean,
-  deathTime: string
+  deathTime: number
 }
 
 export type TeamInfoNote = {
-  type: string,
-  x: string,
-  y: string
+  type: number,
+  x: number,
+  y: number
 }
 
 export type TeamInfo = {
-  leaderSteamId: string,
+  leaderSteamId: number,
   members: Array<TeamInfoMember>,
   mapNotes: Array<TeamInfoNote>,
   leaderMapNotes: Array<TeamInfoNote>
 }
 
 export type TeamChanged = {
-  playerId: string,
+  playerId: number,
   teamInfo: TeamInfo
 }
 
@@ -35,35 +35,35 @@ export type NewTeamMessage = {
 }
 
 export type TeamMessage = {
-  steamId: string,
+  steamId: number,
   name: string,
   message: string,
   color: string,
-  time: string
+  time: number
 }
 
 export type EntityChanged = {
-  entityId: string,
+  entityId: number,
   payload: EntityPayload,
 }
 
 export type EntityPayloadItem = {
-  itemId: string,
-  quantity: string,
+  itemId: number,
+  quantity: number,
   itemIsBlueprint: boolean
 }
 
 export type EntityPayload = {
   value?: boolean,
   items: Array<EntityPayloadItem>,
-  capacity?: string,
+  capacity?: number,
   hasProtection?: boolean,
-  protectionExpiry?: string
+  protectionExpiry?: number
 }
 
 export type ClanInfoRole = {
-  roleId: string,
-  rank: string,
+  roleId: number,
+  rank: number,
   name: string,
   canSetMotd: boolean,
   canSetLogo: boolean,
@@ -76,45 +76,45 @@ export type ClanInfoRole = {
 }
 
 export type ClanInfoMember = {
-  steamId: string,
-  roleId: string,
-  joined: string,
-  lastSeen: string,
+  steamId: number,
+  roleId: number,
+  joined: number,
+  lastSeen: number,
   notes?: string,
   online?: boolean
 }
 
 export type ClanInfoInvite = {
-  steamId: string,
-  recruiter: string,
-  timestamp: string
+  steamId: number,
+  recruiter: number,
+  timestamp: number
 }
 
 export type ClanInfo = {
-  clanId: string,
+  clanId: number,
   name: string,
-  created: string,
-  creator: string,
+  created: number,
+  creator: number,
   motd?: string,
-  motdTimestamp?: string,
-  motdAuthor?: string,
+  motdTimestamp?: number,
+  motdAuthor?: number,
   logo?: string,
-  color?: string,
+  color?: number,
   roles: Array<ClanInfoRole>,
   members: Array<ClanInfoMember>,
   invites: Array<ClanInfoInvite>,
-  maxMemberCount?: string
+  maxMemberCount?: number
 }
 
 export type ClanMessage = {
-  steamId: string,
+  steamId: number,
   name: string,
   message: string,
-  time: string
+  time: number
 }
 
 export type NewClanMessage = {
-  clanId: string,
+  clanId: number,
   message: ClanMessage,
 }
 
@@ -127,20 +127,20 @@ export type CameraRaysEntityType = {
 }
 
 export type Vector3 = {
-  x?: string,
-  y?: string,
-  z?: string
+  x?: number,
+  y?: number,
+  z?: number
 }
 
 export type Vector4 = {
-  x?: string,
-  y?: string,
-  z?: string,
-  w?: string
+  x?: number,
+  y?: number,
+  z?: number,
+  w?: number
 }
 
-export type AppCameraRaysEntity = {
-  entityId: string,
+export type CameraRaysEntity = {
+  entityId: number,
   type: CameraRaysEntityType,
   position: Vector3,
   rotation: Vector3,
@@ -149,11 +149,11 @@ export type AppCameraRaysEntity = {
 }
 
 export type CameraRays = {
-  verticalFov: string,
-  sampleOffset: string,
+  verticalFov: number,
+  sampleOffset: number,
   rayData: string,
-  distance: string,
-  entities: Array<AppCameraRaysEntity>
+  distance: number,
+  entities: Array<CameraRaysEntity>
 }
 
 export type Broadcast = {
@@ -186,7 +186,7 @@ export type SetEntityValue = {
 }
 
 export type PromoteToLeader = {
-  steamId: string
+  steamId: number
 }
 
 export type GetNexusAuth = {
@@ -198,25 +198,25 @@ export type Info = {
   headerImage: string,
   url: string,
   map: string,
-  mapSize: string,
-  wipeTime: string,
-  players: string,
-  maxPlayers: string,
-  queuedPlayers: string,
-  seed?: string,
-  salt?: string,
+  mapSize: number,
+  wipeTime: number,
+  players: number,
+  maxPlayers: number,
+  queuedPlayers: number,
+  seed?: number,
+  salt?: number,
   logoImage?: string,
   nexus?: string,
-  nexusId?: string,
+  nexusId?: number,
   nexusZone?: string
 }
 
 export type Time = {
-  dayLengthMinutes: string,
-  timeScale: string,
-  sunrise: string,
-  sunset: string,
-  time: string
+  dayLengthMinutes: number,
+  timeScale: number,
+  sunrise: number,
+  sunset: number,
+  time: number
 }
 
 export type TeamChat = {
@@ -233,30 +233,30 @@ export type MapMarkers = {
 }
 
 export type MarkerSellOrder = {
-  itemId: string,
-  quantity: string,
-  currencyId: string,
-  costPerItem: string,
-  amountInStock: string,
+  itemId: number,
+  quantity: number,
+  currencyId: number,
+  costPerItem: number,
+  amountInStock: number,
   itemIsBlueprint: boolean,
   currencyIsBlueprint: boolean,
-  itemCondition?: string,
-  itemConditionMax?: string
+  itemCondition?: number,
+  itemConditionMax?: number
 }
 
 export type MarkerType = 'Undefined' | 'Player' | 'Explosion' | 'VendingMachine' | 'CH47' | 'CargoShip' | 'Crate' | 'GenericRadius' | 'PatrolHelicopter'
 
 export type Marker = {
-  id: string,
+  id: number,
   type: MarkerType,
-  x: string,
-  y: string,
-  steamId?: string,
-  rotation?: string,
-  radius?: string,
+  x: number,
+  y: number,
+  steamId?: number,
+  rotation?: number,
+  radius?: number,
   color1?: Vector4,
   color2?: Vector4,
-  alpha?: string,
+  alpha?: number,
   name?: string,
   outOfStock?: boolean,
   sellOrders: Array<MarkerSellOrder>
@@ -268,34 +268,34 @@ export type ClanChat = {
 
 export type AppMapMonument = {
   token: string,
-  x: string,
-  y: string
+  x: number,
+  y: number
 }
 
 export type AppMap = {
-  width: string,
-  height: string,
+  width: number,
+  height: number,
   jpgImage: string,
-  oceanMargin: string,
+  oceanMargin: number,
   monuments: Array<AppMapMonument>,
   background?: string
 }
 
 export type NexusAuth = {
   serverId: string,
-  playerToken: string
+  playerToken: number
 }
 
 export type CameraInfo = {
-  width: string,
-  height: string,
-  nearPlane: string,
-  farPlane: string,
-  controlFlags: string
+  width: number,
+  height: number,
+  nearPlane: number,
+  farPlane: number,
+  controlFlags: number
 }
 
 export type Response = {
-  seq: string,
+  seq: number,
   success?: Success
   error?: AppError
   info?: Info

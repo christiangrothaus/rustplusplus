@@ -7,7 +7,7 @@ import PushListener, { SwitchPushNotification } from './PushListener';
 import Command from './Command';
 import RustPlusWrapper from './RustPlusWrapper';
 import { createSmartSwitchButtonRow, createSmartSwitchEmbed, ephemeralReply, getMessageEmbed, updateMessageName, updateMessageStatus } from '../utils/messages';
-import { Message as RustMessage } from '../models/RustPlus.models';
+import { EntityChanged } from '../models/RustPlus.models';
 
 export default class DiscordManager {
   client: Client<boolean>;
@@ -236,15 +236,14 @@ export default class DiscordManager {
         this.fetchAllEntityInfo();
       });
 
-      this.rustPlus.onEntityChange((msg: RustMessage) => {
-        const entityChange = msg?.broadcast?.entityChanged;
-
+      this.rustPlus.onEntityChange((entityChange: EntityChanged) => {
         const entityId = entityChange?.entityId;
 
         const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
         const message = channel.messages.cache.find((msg) => {
           const embed = msg.embeds[0];
-          return embed.footer?.text === entityId;
+          console.log(embed, entityId);
+          return embed.footer?.text === `${entityId}`;
         });
         if (message) {
           updateMessageStatus(message, entityChange);

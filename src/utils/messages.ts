@@ -1,11 +1,12 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, Embed, EmbedBuilder, InteractionReplyOptions, Message } from 'discord.js';
+import { EntityChanged } from '../models/RustPlus.models';
 
 export const ephemeralReply = (content: string): InteractionReplyOptions => {
   const reply: InteractionReplyOptions = { content: content, ephemeral: true };
   return reply;
 };
 
-export const createSmartSwitchEmbed = (name?: string, entityId?: string, isActive?: boolean): EmbedBuilder => {
+export const createSmartSwitchEmbed = (name: string, entityId: string, isActive?: boolean): EmbedBuilder => {
   const embedBuilder = new EmbedBuilder()
     .setColor(isActive ? 0x55ff55 : 0xff5555)
 
@@ -51,11 +52,15 @@ export const createSmartSwitchButtonRow = (entityId: string): ActionRowBuilder<B
   return new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, nameButton, deleteButton);
 };
 
-export const updateMessageStatus = (message: Message<boolean>, entityChange: any): void => {
-  const isActive = entityChange?.payload?.value === 'true';
-  message.edit({ embeds: [createSmartSwitchEmbed(null, null, isActive)] });
+export const updateMessageStatus = (message: Message<boolean>, entityChange: EntityChanged): void => {
+  const isActive = entityChange?.payload?.value;
+  const entityId = entityChange.entityId;
+  const name = message.embeds[0].title;
+  message.edit({ embeds: [createSmartSwitchEmbed(name, `${entityId}`, isActive)] });
 };
 
 export const updateMessageName = (message: Message<boolean>, name: string): void => {
-  message.edit({ embeds: [createSmartSwitchEmbed(name)] });
+  const entityId = message.embeds[0].footer?.text;
+  const isActive = message.embeds[0].fields.find((field) => field.name === 'Status')?.value === 'On';
+  message.edit({ embeds: [createSmartSwitchEmbed(name, entityId, isActive)] });
 };

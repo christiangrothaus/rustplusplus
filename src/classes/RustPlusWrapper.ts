@@ -85,6 +85,7 @@ export default class RustPlusWrapper {
     });
 
     this.client.on('message', (msg: Message) => {
+      console.log(msg?.broadcast?.entityChanged);
       if (msg?.broadcast?.entityChanged) {
         this.entityChangeCallbacks.forEach((callback) => callback(msg?.broadcast?.entityChanged));
       }
