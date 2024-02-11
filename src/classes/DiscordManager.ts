@@ -6,7 +6,7 @@ import State from './State';
 import PushListener, { SwitchPushNotification } from './PushListener';
 import Command from './Command';
 import RustPlusWrapper from './RustPlusWrapper';
-import { createSmartSwitchButtonRow, createSmartSwitchEmbed, ephemeralReply, getMessageEmbed, updateMessageName, updateMessageStatus } from '../utils/messages';
+import { createSmartSwitchButtonRow, createSmartSwitchEmbed, ephemeralReply, getMessageEmbed, updateMessage } from '../utils/messages';
 import { EntityChanged } from '../models/RustPlus.models';
 
 export default class DiscordManager {
@@ -145,7 +145,7 @@ export default class DiscordManager {
             });
 
             const newName = submitted.fields.getTextInputValue('newName');
-            updateMessageName(interaction.message, newName);
+            updateMessage(interaction.message, newName);
 
             submitted.reply('Name changed!').then(message => {
               setTimeout(() => message.delete(), 5000);
@@ -261,7 +261,8 @@ export default class DiscordManager {
         });
 
         if (message) {
-          updateMessageStatus(message, entityChange);
+          const { entityId, payload } = entityChange;
+          updateMessage(message, `${entityId}`, null, payload.value);
         }
       });
     }
@@ -291,7 +292,8 @@ export default class DiscordManager {
       if (hasExistingMessage) { return; }
 
       const message = await this.sendEntityMessage(switchPushNotification);
-      this.rustPlus.getEntityInfo(switchPushNotification.entityId);
+      const entityInfo = await this.rustPlus.getEntityInfo(switchPushNotification.entityId);
+      updateMessage(message, switchPushNotification.entityId, switchPushNotification.entityName, entityInfo.payload.value);
       this.state.messages[message.id] = switchPushNotification.entityId;
     });
   }
@@ -312,9 +314,9 @@ export default class DiscordManager {
 
   private async sendEntityMessage(pushNotification: SwitchPushNotification): Promise<Message<true>> {
     const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
-    const { name, entityId } = pushNotification;
+    const { entityName, entityId } = pushNotification;
     return await channel.send({
-      embeds: [createSmartSwitchEmbed(name, entityId)],
+      embeds: [createSmartSwitchEmbed(entityName, entityId)],
       components: [createSmartSwitchButtonRow(entityId)]
     });
   }

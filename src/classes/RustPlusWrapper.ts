@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import RustPlus from '@liamcottle/rustplus.js';
-import { EntityChanged, Message } from '../models/RustPlus.models';
+import { EntityChanged, EntityInfo, Message } from '../models/RustPlus.models';
 
 export const RUST_PLUS_SERVER_PORT_DEFAULT = 28082;
 export const RUST_PLUS_SERVER_PORT_OFFSET = 67;
@@ -31,14 +31,14 @@ export default class RustPlusWrapper {
     this.registerListeners();
   }
 
-  public async getEntityInfo(entityId: string): Promise<any> {
+  public async getEntityInfo(entityId: string): Promise<EntityInfo> {
     if (!this.client) {
       console.log('Failed to get entity info. Client not connected.');
       return;
     }
     return new Promise((resolve) => {
       this.client.getEntityInfo(entityId, (message: Message) => {
-        resolve(message);
+        resolve(message?.response?.entityInfo);
       });
     });
   }
@@ -49,7 +49,6 @@ export default class RustPlusWrapper {
       if (on) {
         this.client.turnSmartSwitchOn(entityId, (message: Message) => {
           const error = this.getErrorMessage(message);
-          console.log(error);
           if (error) {
             reject(error);
           }

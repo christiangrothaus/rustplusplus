@@ -1,24 +1,21 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, Embed, EmbedBuilder, InteractionReplyOptions, Message } from 'discord.js';
-import { EntityChanged } from '../models/RustPlus.models';
 
 export const ephemeralReply = (content: string): InteractionReplyOptions => {
   const reply: InteractionReplyOptions = { content: content, ephemeral: true };
   return reply;
 };
 
-export const createSmartSwitchEmbed = (name: string, entityId: string, isActive?: boolean): EmbedBuilder => {
+export const createSmartSwitchEmbed = (name: string, entityId: string, isActive?: boolean, imageUrl?: string): EmbedBuilder => {
+  console.log({ isActive });
   const embedBuilder = new EmbedBuilder()
     .setColor(isActive ? 0x55ff55 : 0xff5555)
-
     .addFields({ name: 'Status', value: isActive ? 'On' : 'Off' })
+    .setTitle(name)
+    .setFooter({ text: entityId })
     .setTimestamp();
 
-  if (name) {
-    embedBuilder.setTitle(name);
-  }
-
-  if (entityId) {
-    embedBuilder.setFooter({ text: entityId });
+  if (imageUrl) {
+    embedBuilder.setImage(imageUrl);
   }
 
   return embedBuilder;
@@ -52,15 +49,22 @@ export const createSmartSwitchButtonRow = (entityId: string): ActionRowBuilder<B
   return new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, nameButton, deleteButton);
 };
 
-export const updateMessageStatus = (message: Message<boolean>, entityChange: EntityChanged): void => {
-  const isActive = entityChange?.payload?.value;
-  const entityId = entityChange.entityId;
-  const name = message.embeds[0].title;
-  message.edit({ embeds: [createSmartSwitchEmbed(name, `${entityId}`, isActive)] });
-};
+export const updateMessage = async (message: Message<boolean>, entityId?: string, name?: string, isActive?: boolean, imageUrl?: string): Promise<void> => {
+  if (!entityId) {
+    entityId = message.embeds[0].footer?.text;
+  }
 
-export const updateMessageName = (message: Message<boolean>, name: string): void => {
-  const entityId = message.embeds[0].footer?.text;
-  const isActive = message.embeds[0].fields.find((field) => field.name === 'Status')?.value === 'On';
-  message.edit({ embeds: [createSmartSwitchEmbed(name, entityId, isActive)] });
+  if (!name) {
+    name = message.embeds[0].title;
+  }
+
+  if (typeof isActive !== 'boolean') {
+    isActive = message.embeds[0].fields.find((field) => field.name === 'Status')?.value === 'On';
+  }
+
+  if (!imageUrl) {
+    imageUrl = message.embeds[0].image?.url;
+  }
+
+  await message.edit({ embeds: [createSmartSwitchEmbed(name, entityId, isActive, imageUrl)] });
 };
