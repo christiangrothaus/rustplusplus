@@ -138,6 +138,8 @@ export default class DiscordManager {
 
             await interaction.showModal(modal);
 
+            interaction.deferReply({ ephemeral: true });
+
             const submitted = await interaction.awaitModalSubmit({
               time: 60000
             });
@@ -145,7 +147,7 @@ export default class DiscordManager {
             const newName = submitted.fields.getTextInputValue('newName');
             updateMessageName(interaction.message, newName);
 
-            submitted.reply(ephemeralReply('Name changed!')).then(message => {
+            submitted.reply('Name changed!').then(message => {
               setTimeout(() => message.delete(), 5000);
             });
 
@@ -157,13 +159,21 @@ export default class DiscordManager {
             const entityId = embed.footer?.text;
             const entityName = embed.title;
 
+            interaction.deferReply({ ephemeral: true });
+
             try {
               await this.rustPlus.toggleSmartSwitch(entityId, action === 'on');
               this.rustPlus.getEntityInfo(entityId);
             } catch (error) {
-              interaction.reply(ephemeralReply(error as string)).then(message => {
-                setTimeout(() => message.delete(), 5000);
-              });
+              if (typeof error === 'string') {
+                interaction.reply(error).then(message => {
+                  setTimeout(() => message.delete(), 5000);
+                });
+              } else {
+                interaction.reply('An unkown error occured').then(message => {
+                  setTimeout(() => message.delete(), 5000);
+                });
+              }
 
               break;
             }
@@ -177,6 +187,9 @@ export default class DiscordManager {
           case 'delete': {
             delete this.state.messages[interaction.message.id];
             interaction.message.delete();
+            interaction.reply(ephemeralReply('Message deleted!')).then(message => {
+              setTimeout(() => message.delete(), 5000);
+            });
             this.state.save();
 
             break;
