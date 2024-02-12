@@ -1,5 +1,7 @@
 import * as fs from 'fs';
-import { SAVE_DATA_PATH } from '../..';
+import * as path from 'path';
+
+export const SAVE_DATA_PATH = path.join(__dirname + '../../../save.json');
 
 export type ChannelChangeCallbackModel = (oldChannelId: string, channelId: string) => void;
 

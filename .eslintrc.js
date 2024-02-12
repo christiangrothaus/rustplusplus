@@ -21,11 +21,12 @@ module.exports = {
       }
     }
   ],
-  'parser': '@typescript-eslint/parser',
   'parserOptions': {
     'ecmaVersion': 'latest',
     'sourceType': 'module',
-    'project': './tsconfig.json'
+    'project': './tsconfig.json',
+    'parser': '@typescript-eslint/parser',
+    'tsconfigRootDir': __dirname,
   },
   'plugins': [
     '@typescript-eslint',

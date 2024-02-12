@@ -1,4 +1,4 @@
-import State from '../State';
+import State, { SAVE_DATA_PATH } from '../State';
 import fs from 'fs';
 
 const mockReadFileSync = jest.fn();
@@ -7,20 +7,25 @@ const mockWriteFileSync = jest.fn();
 const CHANNEL_ID = '3972311231';
 const RUST_SERVER_HOST = 'localhost';
 const RUST_SERVER_PORT = 25565;
-
-let state: State;
+const GUILD_ID = '1234';
+const RUST_TOKEN = 'myToken';
+const MESSAGES = { 'messageId': 'entityId' };
 
 describe('state', () => {
+  let genericState: State;
+
   beforeEach(() => {
     jest.spyOn(fs, 'readFileSync').mockImplementation(mockReadFileSync);
     jest.spyOn(fs, 'writeFileSync').mockImplementation(mockWriteFileSync);
 
-    state = new State();
+    genericState = new State();
 
-    state.channelId = CHANNEL_ID;
-    state.rustServerHost = RUST_SERVER_HOST;
-    state.rustServerPort = RUST_SERVER_PORT;
-
+    genericState.channelId = CHANNEL_ID;
+    genericState.rustServerHost = RUST_SERVER_HOST;
+    genericState.rustServerPort = RUST_SERVER_PORT;
+    genericState.guildId = GUILD_ID;
+    genericState.rustToken = RUST_TOKEN;
+    genericState.messages = MESSAGES;
   });
 
   it('should create a new state', () => {
@@ -42,12 +47,15 @@ describe('state', () => {
     const expected = JSON.stringify({
       channelId: CHANNEL_ID,
       rustServerHost: RUST_SERVER_HOST,
-      rustServerPort: RUST_SERVER_PORT
+      rustServerPort: RUST_SERVER_PORT,
+      guildId: GUILD_ID,
+      messages: MESSAGES,
+      rustToken: RUST_TOKEN
     });
 
-    state.save();
+    genericState.save();
 
-    expect(fs.writeFileSync).toHaveBeenCalledWith('save.json', expected, 'utf-8');
+    expect(fs.writeFileSync).toHaveBeenCalledWith(SAVE_DATA_PATH, expected, 'utf-8');
   });
 
   it('should load data from save', () => {
@@ -59,11 +67,11 @@ describe('state', () => {
 
     mockReadFileSync.mockReturnValue(JSON.stringify(expected));
 
-    const result = state.loadFromSave();
+    const result = genericState.loadFromSave();
 
     expect(result).toBe(true);
-    expect(state.channelId).toBe(CHANNEL_ID);
-    expect(state.rustServerHost).toBe(RUST_SERVER_HOST);
-    expect(state.rustServerPort).toBe(RUST_SERVER_PORT);
+    expect(genericState.channelId).toBe(CHANNEL_ID);
+    expect(genericState.rustServerHost).toBe(RUST_SERVER_HOST);
+    expect(genericState.rustServerPort).toBe(RUST_SERVER_PORT);
   });
 });
