@@ -127,14 +127,15 @@ export default class DiscordManager {
         const customId = interaction.customId;
         const [entityId, action] = customId.split('-');
         switch (action) {
-          case 'name': {
+          case 'edit': {
             const modal = new ModalBuilder()
-              .setCustomId(entityId + '-nameChangeModal')
-              .setTitle('Change Switch Name');
+              .setCustomId(entityId + '-editModal')
+              .setTitle('Change Switch Details');
 
             const nameInput = new TextInputBuilder()
-              .setCustomId('newName')
-              .setLabel('New Name')
+              .setCustomId('name')
+              .setLabel('Name')
+              .setValue(interaction.message.embeds[0].title)
               .setStyle(TextInputStyle.Short);
 
             const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(nameInput);
@@ -194,8 +195,8 @@ export default class DiscordManager {
       if (interaction.isModalSubmit()) {
         interaction as ModalSubmitInteraction;
 
-        const newName = interaction.fields.getTextInputValue('newName');
-        updateMessage(interaction.message, null, newName);
+        const name = interaction.fields.getTextInputValue('name');
+        updateMessage(interaction.message, null, name, null);
 
         interaction.reply(ephemeralReply('Message updated')).then(message => {
           setTimeout(() => message.delete(), 5000);
