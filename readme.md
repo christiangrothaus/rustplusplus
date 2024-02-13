@@ -12,11 +12,11 @@ To retrieve the Discord token and Application ID, sign in to the Discord develop
 
 The Steam ID needs to be the account that will be pairing with the entities in game. To retrieve your Steam ID go to [SteamDB](steamdb.info) and paste your Steam accounts URL in the search. Make sure to copy the regular **SteamID**.
 
-<code>
+```
 DISCORD_TOKEN={DiscordToken}
 APPLICATION_ID={ApplicationID}
 STEAM_ID={SteamID}
-</code>
+```
 <em>Do not include the curly brackets when entering your secrets</em>
 
 ## Push Notifications
