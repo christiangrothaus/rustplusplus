@@ -1,14 +1,14 @@
 {
   "name": "rustplusplus",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "Discord bot that integrates with Rust+",
   "main": "index.ts",
   "scripts": {
     "start": "ts-node index.ts",
     "test": "jest"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@liamcottle/rustplus.js": "^2.4.0",
     "discord.js": "^14.14.1",
