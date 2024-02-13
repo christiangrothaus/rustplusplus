@@ -77,7 +77,7 @@ export default class State {
 
   loadFromSave(): boolean {
     try {
-      const data: string = fs.readFileSync(SAVE_DATA_PATH, 'utf-8');
+      const data = fs.readFileSync(SAVE_DATA_PATH, 'utf-8');
       const saveData: SavedDataModel = JSON.parse(data);
 
       this.messages = saveData.messages || {};

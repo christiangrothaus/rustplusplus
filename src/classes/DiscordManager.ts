@@ -50,7 +50,7 @@ export default class DiscordManager {
   }
 
   async setSlashCommands(guildId: string): Promise<boolean> {
-    const { CLIENT_ID, DISCORD_TOKEN } = process.env;
+    const { APPLICATION_ID, DISCORD_TOKEN } = process.env;
     const commands: Array<RESTPostAPIChatInputApplicationCommandsJSONBody> = [];
     // Grab all the command folders from the commands directory you created earlier
     const commandsPath = path.join(__dirname, '../commands');
@@ -73,7 +73,7 @@ export default class DiscordManager {
       console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
       const data = await rest.put(
-        Routes.applicationGuildCommands(CLIENT_ID as string, guildId),
+        Routes.applicationGuildCommands(APPLICATION_ID as string, guildId),
         { body: commands }
       ) as Array<any>;
 

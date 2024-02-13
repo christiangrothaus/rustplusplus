@@ -1,7 +1,6 @@
 {   
   "compilerOptions": {
-    "allowJs": true,
     "esModuleInterop": true
   },
-  "include": [ "src", "index.ts", "./.eslintrc.ts"]
+  "include": [ "src", "index.ts", "./.eslintrc.ts"],
 }
