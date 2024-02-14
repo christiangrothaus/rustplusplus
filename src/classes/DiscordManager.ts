@@ -3,15 +3,21 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, ModalBuilder, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import State from './State';
-import PushListener, { SwitchPushNotification } from './PushListener';
+import PushListener from './PushListener';
 import Command from './Command';
 import RustPlusWrapper from './RustPlusWrapper';
-import { EntityChanged } from '../models/RustPlus.models';
-import SmartSwitchMessage from './messages/StorageMonitorMessage';
-import BaseSmartMessage, { AllInfos } from './messages/BaseSmartMessage';
+import { EntityChanged, EntityType } from '../models/RustPlus.models';
+import SmartSwitchMessage from './messages/SmartSwitchMessage';
+import SmartAlarmMessage from './messages/SmartAlarmMessage';
+import StorageMonitorMessage from './messages/StorageMonitorMessage';
+import BaseEntityInfo from './entityInfo/BaseEntityInfo';
+import SmartSwitchEntityInfo from './entityInfo/SmartSwitchEntityInfo';
+import SmartAlarmEntityInfo from './entityInfo/SmartAlarmEntityInfo';
+import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
+import BaseSmartMessage from './messages/BaseSmartMessage';
 
 export default class DiscordManager {
-  client: Client<boolean>;
+  discordClient: Client<boolean>;
 
   rustPlus: RustPlusWrapper;
 
@@ -92,9 +98,9 @@ export default class DiscordManager {
   }
 
   private async initializeDiscord(): Promise<void> {
-    this.client = new Client({ intents: [GatewayIntentBits.Guilds] });
+    this.discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
     this.registerDiscordListeners();
-    await this.client.login(process.env.DISCORD_TOKEN);
+    await this.discordClient.login(process.env.DISCORD_TOKEN);
   }
 
   private initializeRustPlus(): void {
@@ -111,17 +117,17 @@ export default class DiscordManager {
   }
 
   private registerDiscordListeners(): void {
-    this.client.once(Events.ClientReady, readyClient => {
+    this.discordClient.once(Events.ClientReady, readyClient => {
       console.log(`Ready! Logged in as ${readyClient.user.tag}`);
       this.setSlashCommands(this.state.guildId);
     });
 
-    this.client.once(Events.GuildCreate, (guild) => {
+    this.discordClient.once(Events.GuildCreate, (guild) => {
       this.setSlashCommands(guild.id);
       this.state.guildId = guild.id;
     });
 
-    this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+    this.discordClient.on(Events.InteractionCreate, async (interaction: Interaction) => {
       if (interaction.isButton()) {
         interaction as ButtonInteraction;
 
@@ -198,7 +204,8 @@ export default class DiscordManager {
 
         const name = interaction.fields.getTextInputValue('name');
         const message = this.state.messages[interaction.message.id];
-        message.updateMessage({ name });
+
+        this.updateMessage(message, { name });
 
         interaction.reply({ content: 'Message updated', ephemeral: true }).then(message => {
           setTimeout(() => message.delete(), 5000);
@@ -240,7 +247,12 @@ export default class DiscordManager {
 
       for (const message of messages) {
         const entityInfo = await this.rustPlus.getEntityInfo(message.entityInfo.entityId);
-        message.updateMessage({ isActive: entityInfo.payload.value });
+        if (message instanceof StorageMonitorMessage) {
+          this.updateMessage(message, { capacity: entityInfo.payload.capacity });
+        } else {
+          const castedMessage = message as SmartAlarmMessage | SmartSwitchMessage;
+          this.updateMessage(castedMessage, { isActive: entityInfo.payload.value });
+        }
       }
     }
   }
@@ -254,22 +266,19 @@ export default class DiscordManager {
       this.rustPlus.onEntityChange(async (entityChange: EntityChanged) => {
         const entityId = entityChange?.entityId;
 
-        const channel = await this.client.channels.fetch(this.state.channelId) as TextChannel;
-        const discordMessages = await channel.messages.fetch();
+        const messages = Object.values(this.state.messages);
 
-        const discordMessage = discordMessages.find((msg) => {
-          const embed = msg.embeds[0];
-          return embed.footer?.text === `${entityId}`;
-        });
+        // Go through each message and update it then exit the loop
+        for (const message of messages) {
+          if (message.entityInfo.entityId === `${entityId}`) {
+            if (message instanceof StorageMonitorMessage) {
+              this.updateMessage(message, { capacity: entityChange.payload.capacity });
+            } else {
+              const castedMessage = message as SmartAlarmMessage | SmartSwitchMessage;
+              this.updateMessage(castedMessage, { isActive: entityChange.payload.value });
+            }
 
-        const message = this.state.messages[discordMessage.id];
-
-        if (message) {
-          const { entityId, payload } = entityChange;
-
-          message.updateMessage({ entityId: `${entityId}`, isActive: payload.value });
-          if (discordMessage) {
-            discordMessage.edit(message);
+            break;
           }
         }
       });
@@ -278,9 +287,9 @@ export default class DiscordManager {
 
   private registerStateListeners(): void {
     this.state.onChanelIdChange((oldId) => {
-      const oldChannel = this.client.channels.cache.get(oldId) as TextChannel;
+      const oldChannel = this.discordClient.channels.cache.get(oldId) as TextChannel;
       oldChannel.messages.cache.sweep((message) => {
-        if (message.author.id === this.client.user?.id) {
+        if (message.author.id === this.discordClient.user?.id) {
           delete this.state.messages[message.id];
           return true;
         }
@@ -299,15 +308,15 @@ export default class DiscordManager {
 
       if (hasExistingMessage) { return; }
 
-      const message = await this.sendEntityMessage(switchPushNotification);
       const entityInfo = await this.rustPlus.getEntityInfo(switchPushNotification.entityId);
 
-      const channel = await this.client.channels.cache.get(this.state.channelId) as TextChannel;
-      const discordMessage = await channel.messages.fetch(message.messageId);
+      const smartSwitchEntityInfo: SmartSwitchEntityInfo = {
+        name: switchPushNotification.name,
+        entityId: switchPushNotification.entityId,
+        isActive: entityInfo.payload.value
+      };
 
-      message.updateMessage({ entityId: switchPushNotification.entityId, name: switchPushNotification.name, isActive: entityInfo.payload.value });
-
-      discordMessage.edit(message);
+      this.createNewMessage(entityInfo.type, smartSwitchEntityInfo);
     });
   }
 
@@ -325,20 +334,43 @@ export default class DiscordManager {
     }
   }
 
-  private async sendEntityMessage(pushNotification: SwitchPushNotification): Promise<BaseSmartMessage<AllInfos>> {
-    const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
-    const { entityName, entityId } = pushNotification;
-    const smartSwitchMessage = new SmartSwitchMessage({ name: entityName, entityId });
-    const discordMessage = await channel.send(smartSwitchMessage);
-    smartSwitchMessage.messageId = discordMessage.id;
-    this.state.messages[discordMessage.id] = smartSwitchMessage;
-
-    return smartSwitchMessage;
-  }
-
   private startRustPlusKeepAlive(): void {
     this.rustPlusKeepAliveId = setInterval(() => {
       this.fetchAllEntityInfo();
     }, 5 * 60 * 1000);
+  }
+
+  private createNewMessage(entityType: EntityType, entityInfo: BaseEntityInfo): void {
+    let newMessage: BaseSmartMessage<BaseEntityInfo>;
+
+    switch (entityType) {
+      case 'Switch': {
+        const castedEntityInfo = entityInfo as SmartSwitchEntityInfo;
+        newMessage = new SmartSwitchMessage({ name: castedEntityInfo.name, entityId: castedEntityInfo.entityId, isActive: castedEntityInfo.isActive });
+        break;
+      }
+      case 'Alarm': {
+        const castedEntityInfo = entityInfo as SmartAlarmEntityInfo;
+        newMessage = new SmartAlarmMessage({ name: castedEntityInfo.name, entityId: castedEntityInfo.entityId, isActive: castedEntityInfo.isActive });
+        break;
+      }
+      case 'StorageMonitor': {
+        const castedEntityInfo = entityInfo as StorageMonitorEntityInfo;
+        newMessage = new StorageMonitorMessage({ name: castedEntityInfo.name, entityId: castedEntityInfo.entityId, capacity: castedEntityInfo.capacity });
+        break;
+      }
+    }
+
+    this.state.messages[newMessage.messageId] = newMessage;
+    this.state.save();
+  }
+
+  private async updateMessage<BaseEntityInfo>(message: BaseSmartMessage<BaseEntityInfo>, entityInfo: Partial<BaseEntityInfo>): Promise<void> {
+    message.update(entityInfo);
+
+    const channel = await this.discordClient.channels.fetch(message.channelId) as TextChannel;
+    const discordMessage = await channel.messages.fetch(message.messageId);
+
+    await discordMessage.edit(message);
   }
 }

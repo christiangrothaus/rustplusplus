@@ -1,14 +1,15 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
-import BaseSmartMessage, { SmartAlarmInfo } from './BaseSmartMessage';
+import BaseSmartMessage from './BaseSmartMessage';
+import SmartAlarmEntityInfo from '../entityInfo/SmartAlarmEntityInfo';
 
-export default class SmartAlarmMessage extends BaseSmartMessage<SmartAlarmInfo> {
+export default class SmartAlarmMessage extends BaseSmartMessage<SmartAlarmEntityInfo> {
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/smart-alarm.png';
 
-  constructor(entityInfo: SmartAlarmInfo) {
+  constructor(entityInfo: SmartAlarmEntityInfo) {
     super(entityInfo);
   }
 
-  createMessageEmbed(entityInfo: SmartAlarmInfo): EmbedBuilder {
+  createMessageEmbed(entityInfo: SmartAlarmEntityInfo): EmbedBuilder {
     const { name, entityId, isActive } = entityInfo;
 
     const embedBuilder = new EmbedBuilder()
@@ -22,7 +23,7 @@ export default class SmartAlarmMessage extends BaseSmartMessage<SmartAlarmInfo> 
     return embedBuilder;
   }
 
-  createMessageButtons(entityInfo: SmartAlarmInfo): ActionRowBuilder<ButtonBuilder> {
+  createMessageButtons(entityInfo: SmartAlarmEntityInfo): ActionRowBuilder<ButtonBuilder> {
     const { entityId } = entityInfo;
 
     const editButton = new ButtonBuilder()

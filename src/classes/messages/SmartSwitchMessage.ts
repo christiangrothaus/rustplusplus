@@ -1,16 +1,17 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
-import BaseSmartMessage, { SmartSwitchInfo } from './BaseSmartMessage';
+import BaseSmartMessage from './BaseSmartMessage';
+import SmartSwitchEntityInfo from '../entityInfo/SmartSwitchEntityInfo';
 
 
 
-export default class SmartSwitchMessage extends BaseSmartMessage<SmartSwitchInfo> {
+export default class SmartSwitchMessage extends BaseSmartMessage<SmartSwitchEntityInfo> {
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/smart-switch.png';
 
-  constructor(entityInfo: SmartSwitchInfo) {
+  constructor(entityInfo: SmartSwitchEntityInfo) {
     super(entityInfo);
   }
 
-  createMessageEmbed(entityInfo: SmartSwitchInfo): EmbedBuilder {
+  createMessageEmbed(entityInfo: SmartSwitchEntityInfo): EmbedBuilder {
     const { name, entityId, isActive } = entityInfo;
 
     const embedBuilder = new EmbedBuilder()
@@ -24,7 +25,7 @@ export default class SmartSwitchMessage extends BaseSmartMessage<SmartSwitchInfo
     return embedBuilder;
   }
 
-  createMessageButtons(entityInfo: SmartSwitchInfo): ActionRowBuilder<ButtonBuilder> {
+  createMessageButtons(entityInfo: SmartSwitchEntityInfo): ActionRowBuilder<ButtonBuilder> {
     const { entityId } = entityInfo;
 
     const onButton = new ButtonBuilder()

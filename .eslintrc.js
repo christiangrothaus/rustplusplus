@@ -35,7 +35,7 @@ module.exports = {
   ],
   'rules': {
     '@stylistic/ts/indent': ['error', 2],
-    'semi': ['error', 'always'],
+    '@typescript-eslint/semi': ['error', 'always'],
     'quotes': ['error', 'single'],
     '@stylistic/ts/comma-dangle': ['error', 'never'],
     '@stylistic/ts/object-curly-spacing': ['error', 'always'],

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import BaseSmartMessage, { AllInfos } from './messages/BaseSmartMessage';
+import BaseSmartMessage from './messages/BaseSmartMessage';
+import BaseEntityInfo from './entityInfo/BaseEntityInfo';
 
 export const SAVE_DATA_PATH = path.join(__dirname + '../../../save.json');
 
@@ -13,7 +14,7 @@ export type DataToSaveModel = {
   rustServerPort: number,
   guildId: string,
   rustToken: string
-}
+};
 
 export type SavedDataModel = {
   channelId: string,
@@ -22,10 +23,10 @@ export type SavedDataModel = {
   guildId: string,
   rustToken: string,
   messages: EntityMessages
-}
+};
 
 // key is message id
-export type EntityMessages = { [key: string]: BaseSmartMessage<AllInfos> };
+export type EntityMessages = { [key: string]: BaseSmartMessage<BaseEntityInfo> };
 
 export default class State {
   rustServerHost: string;
