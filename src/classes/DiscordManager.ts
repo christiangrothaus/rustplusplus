@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, ModalBuilder, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import State from './State';
 import PushListener, { SwitchPushNotification } from './PushListener';
 import Command from './Command';
 import RustPlusWrapper from './RustPlusWrapper';
-import { createSmartSwitchButtonRow, createSmartSwitchEmbed, ephemeralReply, getMessageEmbed, updateMessage } from '../utils/messages';
 import { EntityChanged } from '../models/RustPlus.models';
+import SmartSwitchMessage from './messages/StorageMonitorMessage';
+import BaseSmartMessage, { AllInfos } from './messages/BaseSmartMessage';
 
 export default class DiscordManager {
   client: Client<boolean>;
@@ -148,7 +149,7 @@ export default class DiscordManager {
           }
           case 'on':
           case 'off': {
-            const embed = getMessageEmbed(interaction);
+            const embed = interaction.message.embeds[0];
             const entityId = embed.footer?.text;
             const entityName = embed.title;
 
@@ -180,7 +181,7 @@ export default class DiscordManager {
           case 'delete': {
             delete this.state.messages[interaction.message.id];
             interaction.message.delete();
-            interaction.reply(ephemeralReply('Message deleted!')).then(message => {
+            interaction.reply({ content: 'Message deleted!', ephemeral: true }).then(message => {
               setTimeout(() => message.delete(), 5000);
             });
             this.state.save();
@@ -196,9 +197,10 @@ export default class DiscordManager {
         interaction as ModalSubmitInteraction;
 
         const name = interaction.fields.getTextInputValue('name');
-        updateMessage(interaction.message, null, name, null);
+        const message = this.state.messages[interaction.message.id];
+        message.updateMessage({ name });
 
-        interaction.reply(ephemeralReply('Message updated')).then(message => {
+        interaction.reply({ content: 'Message updated', ephemeral: true }).then(message => {
           setTimeout(() => message.delete(), 5000);
         });
       }
@@ -232,18 +234,15 @@ export default class DiscordManager {
     await this.initializePushListener();
   }
 
-  private async fetchAllEntityInfo(): Promise<Array<any>> {
-    const messages: Array<any> = [];
-
+  private async fetchAllEntityInfo(): Promise<void> {
     if (this.state.messages) {
-      const entityIds = Object.values(this.state.messages);
+      const messages = Object.values(this.state.messages);
 
-      for (const entityId of entityIds) {
-        messages.push(await this.rustPlus.getEntityInfo(entityId));
+      for (const message of messages) {
+        const entityInfo = await this.rustPlus.getEntityInfo(message.entityInfo.entityId);
+        message.updateMessage({ isActive: entityInfo.payload.value });
       }
     }
-
-    return messages;
   }
 
   private registerRustPlusListeners(): void {
@@ -256,16 +255,22 @@ export default class DiscordManager {
         const entityId = entityChange?.entityId;
 
         const channel = await this.client.channels.fetch(this.state.channelId) as TextChannel;
-        const messages = await channel.messages.fetch();
+        const discordMessages = await channel.messages.fetch();
 
-        const message = messages.find((msg) => {
+        const discordMessage = discordMessages.find((msg) => {
           const embed = msg.embeds[0];
           return embed.footer?.text === `${entityId}`;
         });
 
+        const message = this.state.messages[discordMessage.id];
+
         if (message) {
           const { entityId, payload } = entityChange;
-          updateMessage(message, `${entityId}`, null, payload.value);
+
+          message.updateMessage({ entityId: `${entityId}`, isActive: payload.value });
+          if (discordMessage) {
+            discordMessage.edit(message);
+          }
         }
       });
     }
@@ -288,16 +293,21 @@ export default class DiscordManager {
   private registerPushListeners(): void {
     this.pushListener.onNewSwitch(async (switchPushNotification) => {
       const messages = Object.values(this.state.messages);
-      const hasExistingMessage = messages.findIndex((entityId) => {
-        return entityId === switchPushNotification.entityId;
+      const hasExistingMessage = messages.findIndex((smartMessage) => {
+        return smartMessage.entityInfo.entityId === switchPushNotification.entityId;
       }) !== -1;
 
       if (hasExistingMessage) { return; }
 
       const message = await this.sendEntityMessage(switchPushNotification);
       const entityInfo = await this.rustPlus.getEntityInfo(switchPushNotification.entityId);
-      updateMessage(message, switchPushNotification.entityId, switchPushNotification.entityName, entityInfo.payload.value);
-      this.state.messages[message.id] = switchPushNotification.entityId;
+
+      const channel = await this.client.channels.cache.get(this.state.channelId) as TextChannel;
+      const discordMessage = await channel.messages.fetch(message.messageId);
+
+      message.updateMessage({ entityId: switchPushNotification.entityId, name: switchPushNotification.name, isActive: entityInfo.payload.value });
+
+      discordMessage.edit(message);
     });
   }
 
@@ -315,13 +325,15 @@ export default class DiscordManager {
     }
   }
 
-  private async sendEntityMessage(pushNotification: SwitchPushNotification): Promise<Message<true>> {
+  private async sendEntityMessage(pushNotification: SwitchPushNotification): Promise<BaseSmartMessage<AllInfos>> {
     const channel = this.client.channels.cache.get(this.state.channelId) as TextChannel;
     const { entityName, entityId } = pushNotification;
-    return await channel.send({
-      embeds: [createSmartSwitchEmbed(entityName, entityId)],
-      components: [createSmartSwitchButtonRow(entityId)]
-    });
+    const smartSwitchMessage = new SmartSwitchMessage({ name: entityName, entityId });
+    const discordMessage = await channel.send(smartSwitchMessage);
+    smartSwitchMessage.messageId = discordMessage.id;
+    this.state.messages[discordMessage.id] = smartSwitchMessage;
+
+    return smartSwitchMessage;
   }
 
   private startRustPlusKeepAlive(): void {
