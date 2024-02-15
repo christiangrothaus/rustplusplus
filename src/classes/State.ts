@@ -1,7 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import BaseSmartMessage from './messages/BaseSmartMessage';
+import BaseSmartMessage, { MessageJson } from './messages/BaseSmartMessage';
 import BaseEntityInfo from './entityInfo/BaseEntityInfo';
+import SmartAlarmMessage from './messages/SmartAlarmMessage';
+import SmartSwitchMessage from './messages/SmartSwitchMessage';
+import StorageMonitorMessage from './messages/StorageMonitorMessage';
 
 export const SAVE_DATA_PATH = path.join(__dirname + '../../../save.json');
 
@@ -22,11 +25,18 @@ export type SavedDataModel = {
   rustServerPort: number,
   guildId: string,
   rustToken: string,
-  messages: EntityMessages
+  messages: EntityMessagesJson
 };
 
-// key is message id
+/**
+ * @description The key is the discord message ID
+ */
 export type EntityMessages = { [key: string]: BaseSmartMessage<BaseEntityInfo> };
+
+/**
+ * @description The key is the discord message ID
+ */
+export type EntityMessagesJson = { [key: string]: MessageJson<BaseEntityInfo> };
 
 export default class State {
   rustServerHost: string;
@@ -82,7 +92,30 @@ export default class State {
       const data = fs.readFileSync(SAVE_DATA_PATH, 'utf-8');
       const saveData: SavedDataModel = JSON.parse(data);
 
-      this.messages = saveData.messages || {};
+      this.messages = {};
+
+      Object.values(saveData.messages).forEach((message) => {
+        let instantiatedMessage: BaseSmartMessage<BaseEntityInfo>;
+        switch (message.entityType) {
+          case 'Alarm':{
+            instantiatedMessage = new SmartAlarmMessage(message.entityInfo);
+            break;
+          }
+          case 'Switch':{
+            instantiatedMessage = new SmartSwitchMessage(message.entityInfo);
+            break;
+          }
+          case 'StorageMonitor': {
+            instantiatedMessage = new StorageMonitorMessage(message.entityInfo);
+            break;
+          }
+        }
+        instantiatedMessage.messageId = message.messageId;
+        instantiatedMessage.channelId = message.channelId;
+
+        this.messages[message.messageId] = instantiatedMessage;
+      });
+
       this.channelId = saveData.channelId;
       this.rustServerHost = saveData.rustServerHost;
       this.rustServerPort = saveData.rustServerPort;

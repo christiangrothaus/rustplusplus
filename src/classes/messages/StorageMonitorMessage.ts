@@ -3,6 +3,8 @@ import BaseSmartMessage from './BaseSmartMessage';
 import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
 
 export default class StorageMonitorMessage extends BaseSmartMessage<StorageMonitorEntityInfo> {
+  public readonly entityType = 'StorageMonitor';
+
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/storage-monitor.png';
 
   constructor(entityInfo: StorageMonitorEntityInfo) {

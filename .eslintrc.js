@@ -43,6 +43,7 @@ module.exports = {
     '@stylistic/ts/keyword-spacing': ['error', { 'before': true, 'after': true }],
     '@stylistic/js/no-multi-spaces': 'error',
     '@typescript-eslint/no-unsafe-argument': 'error',
-    '@typescript-eslint/no-explicit-any': 'off'
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@stylistic/js/no-multiple-empty-lines': ['error', { 'max': 1 }],
   }
 };

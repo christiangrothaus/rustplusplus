@@ -1,9 +1,11 @@
 import { ActionRowBuilder, ButtonBuilder, EmbedBuilder, MessageCreateOptions } from 'discord.js';
+import { EntityType } from '../../models/RustPlus.models';
 
-type SmartMessageJson<BaseEntityInfo> = {
+export type MessageJson<BaseEntityInfo> = {
   entityInfo: BaseEntityInfo,
   messageId: string,
   channelId: string
+  entityType: EntityType
 };
 
 export default abstract class BaseSmartMessage<BaseEntityInfo> implements MessageCreateOptions {
@@ -16,6 +18,8 @@ export default abstract class BaseSmartMessage<BaseEntityInfo> implements Messag
   public messageId: string;
 
   public channelId: string;
+
+  public abstract readonly entityType: EntityType;
 
   protected abstract ENTITY_IMAGE_URL: string;
 
@@ -33,11 +37,12 @@ export default abstract class BaseSmartMessage<BaseEntityInfo> implements Messag
     this.components = [this.createMessageButtons(this.entityInfo)];
   }
 
-  public toJSON(): SmartMessageJson<BaseEntityInfo> {
+  public toJSON(): MessageJson<BaseEntityInfo> {
     return {
       entityInfo: this.entityInfo,
       messageId: this.messageId,
-      channelId: this.channelId
+      channelId: this.channelId,
+      entityType: this.entityType
     };
   }
 

@@ -3,6 +3,8 @@ import BaseSmartMessage from './BaseSmartMessage';
 import SmartAlarmEntityInfo from '../entityInfo/SmartAlarmEntityInfo';
 
 export default class SmartAlarmMessage extends BaseSmartMessage<SmartAlarmEntityInfo> {
+  public readonly entityType = 'Alarm';
+
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/smart-alarm.png';
 
   constructor(entityInfo: SmartAlarmEntityInfo) {
