@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Command, { CommandExecute } from '../classes/Command';
-import { ephemeralReply } from '../utils/messages';
 
 export const data = new SlashCommandBuilder()
   .setName('setchannel')
@@ -9,7 +8,7 @@ export const data = new SlashCommandBuilder()
 export const execute: CommandExecute = async (interaction, discordManager) => {
   discordManager.state.channelId = interaction.channelId;
 
-  interaction.reply(ephemeralReply('Switches being created')).then(message => {
+  interaction.reply({ content: 'Switches being created', ephemeral: true }).then(message => {
     setTimeout(() => message.delete(), 5000);
   });
 };

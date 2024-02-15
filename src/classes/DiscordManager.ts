@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import * as path from 'path';
 import * as fs from 'fs';
-import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, ModalBuilder, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonInteraction, ChatInputCommandInteraction, Client, Collection, Events, GatewayIntentBits, Interaction, Message, ModalBuilder, ModalSubmitInteraction, REST, RESTPostAPIChatInputApplicationCommandsJSONBody, Routes, TextChannel, TextInputBuilder, TextInputStyle } from 'discord.js';
 import State from './State';
 import PushListener from './PushListener';
 import Command from './Command';
@@ -117,7 +117,7 @@ export default class DiscordManager {
   }
 
   private registerDiscordListeners(): void {
-    this.discordClient.once(Events.ClientReady, readyClient => {
+    this.discordClient.once(Events.ClientReady, (readyClient) => {
       console.log(`Ready! Logged in as ${readyClient.user.tag}`);
       this.setSlashCommands(this.state.guildId);
     });
@@ -340,7 +340,7 @@ export default class DiscordManager {
     }, 5 * 60 * 1000);
   }
 
-  private createNewMessage(entityType: EntityType, entityInfo: BaseEntityInfo): void {
+  private async createNewMessage(entityType: EntityType, entityInfo: BaseEntityInfo): Promise<Message> {
     let newMessage: BaseSmartMessage<BaseEntityInfo>;
 
     switch (entityType) {
@@ -361,11 +361,15 @@ export default class DiscordManager {
       }
     }
 
-    this.state.messages[newMessage.messageId] = newMessage;
+    const channel = await this.discordClient.channels.fetch(this.state.channelId) as TextChannel;
+    const discordMessage = await channel.send(newMessage);
+    this.state.messages[discordMessage.id] = newMessage;
     this.state.save();
+
+    return discordMessage;
   }
 
-  private async updateMessage<BaseEntityInfo>(message: BaseSmartMessage<BaseEntityInfo>, entityInfo: Partial<BaseEntityInfo>): Promise<void> {
+  private async updateMessage<T extends BaseEntityInfo>(message: BaseSmartMessage<T>, entityInfo: Partial<T>): Promise<void> {
     message.update(entityInfo);
 
     const channel = await this.discordClient.channels.fetch(message.channelId) as TextChannel;

@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, EmbedBuilder, MessageCreateOptions } from 'discord.js';
 import { EntityType } from '../../models/RustPlus.models';
+import BaseEntityInfo from '../entityInfo/BaseEntityInfo';
 
 export type MessageJson<BaseEntityInfo> = {
   entityInfo: BaseEntityInfo,
@@ -8,12 +9,12 @@ export type MessageJson<BaseEntityInfo> = {
   entityType: EntityType
 };
 
-export default abstract class BaseSmartMessage<BaseEntityInfo> implements MessageCreateOptions {
+export default abstract class BaseSmartMessage<T extends BaseEntityInfo> implements MessageCreateOptions {
   public embeds: Array<EmbedBuilder>;
 
   public components: Array<ActionRowBuilder<ButtonBuilder>>;
 
-  public entityInfo: BaseEntityInfo;
+  public entityInfo: T;
 
   public messageId: string;
 
@@ -23,21 +24,21 @@ export default abstract class BaseSmartMessage<BaseEntityInfo> implements Messag
 
   protected abstract ENTITY_IMAGE_URL: string;
 
-  constructor(entityInfo: BaseEntityInfo) {
+  constructor(entityInfo: T) {
     this.entityInfo = entityInfo;
 
     this.embeds = [this.createMessageEmbed(this.entityInfo)];
     this.components = [this.createMessageButtons(this.entityInfo)];
   }
 
-  public async update(entityInfo: Partial<BaseEntityInfo>): Promise<void> {
+  public async update(entityInfo: Partial<T>): Promise<void> {
     this.entityInfo = { ...this.entityInfo, ...entityInfo };
 
     this.embeds = [this.createMessageEmbed(this.entityInfo)];
     this.components = [this.createMessageButtons(this.entityInfo)];
   }
 
-  public toJSON(): MessageJson<BaseEntityInfo> {
+  public toJSON(): MessageJson<T> {
     return {
       entityInfo: this.entityInfo,
       messageId: this.messageId,
@@ -46,7 +47,7 @@ export default abstract class BaseSmartMessage<BaseEntityInfo> implements Messag
     };
   }
 
-  protected abstract createMessageEmbed(entityInfo: BaseEntityInfo): EmbedBuilder;
+  protected abstract createMessageEmbed(entityInfo: T): EmbedBuilder;
 
-  protected abstract createMessageButtons(entityInfo: BaseEntityInfo): ActionRowBuilder<ButtonBuilder>;
+  protected abstract createMessageButtons(entityInfo: T): ActionRowBuilder<ButtonBuilder>;
 }

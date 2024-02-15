@@ -1,9 +1,9 @@
 import DiscordManager from '../DiscordManager';
 import PushListener from '../PushListener';
 import State from '../State';
+import SmartSwitchEntityInfo from '../entityInfo/SmartSwitchEntityInfo';
 
-jest.mock('../State');
-jest.mock('../PushListener');
+jest.mock('discord.js');
 
 describe('DiscordManager', () => {
   let discordManager: DiscordManager;
@@ -58,12 +58,21 @@ describe('DiscordManager', () => {
     it('should not destroy the push listener if there is not one', () => {
       const pushListenerDestroySpy = jest.spyOn(PushListener.prototype, 'destroy');
 
-
       expect(() => {
         discordManager.destroy();
       }).toThrow();
 
       expect(pushListenerDestroySpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createNewMessage', () => {
+    it('should create a new switch message', async () => {
+      discordManager.start();
+
+      const message = await discordManager['createNewMessage']('Switch', <SmartSwitchEntityInfo>{ entityId: '1', name: 'Switch', isActive: true });
+
+      expect(message).toBeDefined();
     });
   });
 });

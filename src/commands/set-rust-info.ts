@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Command, { CommandExecute } from '../classes/Command';
-import { ephemeralReply } from '../utils/messages';
 import { RUST_PLUS_SERVER_PORT_OFFSET } from '../classes/RustPlusWrapper';
 
 const SERVER_HOST_FIELD = 'serverhost';
@@ -24,14 +23,13 @@ export const execute: CommandExecute = async (interaction, discordManager) => {
   const port = interaction.options.getNumber(SERVER_PORT_FIELD);
 
   if (!host) {
-    interaction.reply(ephemeralReply('No server hostname/IP provided'));
+    interaction.reply({ content: 'No server hostname/IP provided', ephemeral: true });
     return;
   }
 
-
   if (port) {
     if (port < 1 || port > 65535) {
-      interaction.reply(ephemeralReply('Invalid port number'));
+      interaction.reply({ content: 'Invalid port number', ephemeral: true });
       return;
     }
     discordManager.state.rustServerPort = port + RUST_PLUS_SERVER_PORT_OFFSET;
@@ -40,7 +38,7 @@ export const execute: CommandExecute = async (interaction, discordManager) => {
   discordManager.state.rustServerHost = host;
   discordManager.restart();
 
-  interaction.reply(ephemeralReply('Server info set successfully'));
+  interaction.reply({ content: 'Server info set successfully', ephemeral: true });
 };
 
 export default new Command(data, execute);
