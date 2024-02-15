@@ -1,3 +1,5 @@
+#WIP
+
 # Rust++
 
 Rust++ is a Discord bot that integrates with Rust+.  It supports the same features as the Rust+ app while adding extended functionality.
