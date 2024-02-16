@@ -1,16 +1,19 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder } from 'discord.js';
-import BaseSmartMessage, { SmartAlarmInfo } from '../BaseSmartMessage';
+import BaseSmartMessage from '../BaseSmartMessage';
+import SmartAlarmEntityInfo from '../../entityInfo/SmartAlarmEntityInfo';
+import { EntityType } from '../../../models/RustPlus.models';
 
-class DummySmartMessage extends BaseSmartMessage<SmartAlarmInfo> {
+class DummySmartMessage extends BaseSmartMessage<SmartAlarmEntityInfo> {
+  public entityType: EntityType;
   protected ENTITY_IMAGE_URL: string;
 
   //eslint-disable-next-line
-  createMessageEmbed(entityInfo: SmartAlarmInfo): EmbedBuilder {
+  createMessageEmbed(entityInfo: SmartAlarmEntityInfo): EmbedBuilder {
     return new EmbedBuilder();
   }
 
   //eslint-disable-next-line
-  createMessageButtons(entityInfo: SmartAlarmInfo): ActionRowBuilder<ButtonBuilder> {
+  createMessageButtons(entityInfo: SmartAlarmEntityInfo): ActionRowBuilder<ButtonBuilder> {
     return new ActionRowBuilder<ButtonBuilder>();
   }
 }
@@ -43,7 +46,7 @@ describe('BaseSmartMessage', () => {
       const updatedEntityInfo = {
         name: 'new name'
       };
-      baseSmartMessage.updateMessage(updatedEntityInfo);
+      baseSmartMessage.update(updatedEntityInfo);
 
       expect(baseSmartMessage.entityInfo).toEqual({
         ...entityInfo,
