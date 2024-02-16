@@ -363,6 +363,8 @@ export default class DiscordManager {
 
     const channel = await this.discordClient.channels.fetch(this.state.channelId) as TextChannel;
     const discordMessage = await channel.send(newMessage);
+    newMessage.channelId = discordMessage.channel.id;
+    newMessage.messageId = discordMessage.id;
     this.state.messages[discordMessage.id] = newMessage;
     this.state.save();
 

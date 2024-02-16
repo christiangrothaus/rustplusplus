@@ -40,10 +40,14 @@ module.exports = {
     '@stylistic/ts/comma-dangle': ['error', 'never'],
     '@stylistic/ts/object-curly-spacing': ['error', 'always'],
     'no-trailing-spaces': 'error',
-    '@stylistic/ts/keyword-spacing': ['error', { 'before': true, 'after': true }],
+    '@stylistic/ts/keyword-spacing': ['error', {
+      'before': true,
+      'after': true
+    }],
     '@stylistic/js/no-multi-spaces': 'error',
     '@typescript-eslint/no-unsafe-argument': 'error',
     '@typescript-eslint/no-explicit-any': 'off',
-    '@stylistic/js/no-multiple-empty-lines': ['error', { 'max': 1 }]
+    '@stylistic/js/no-multiple-empty-lines': ['error', { 'max': 1 }],
+    '@stylistic/js/object-curly-newline': ['error', { 'multiline': true, 'consistent': true }]
   }
 };
