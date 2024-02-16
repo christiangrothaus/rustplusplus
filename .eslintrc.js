@@ -2,7 +2,7 @@ module.exports = {
   'env': {
     'browser': true,
     'es2021': true,
-    "node": true
+    'node': true
   },
   'extends': [
     'eslint:recommended',
@@ -26,7 +26,7 @@ module.exports = {
     'sourceType': 'module',
     'project': './tsconfig.json',
     'parser': '@typescript-eslint/parser',
-    'tsconfigRootDir': __dirname,
+    'tsconfigRootDir': __dirname
   },
   'plugins': [
     '@typescript-eslint',
@@ -44,6 +44,6 @@ module.exports = {
     '@stylistic/js/no-multi-spaces': 'error',
     '@typescript-eslint/no-unsafe-argument': 'error',
     '@typescript-eslint/no-explicit-any': 'off',
-    '@stylistic/js/no-multiple-empty-lines': ['error', { 'max': 1 }],
+    '@stylistic/js/no-multiple-empty-lines': ['error', { 'max': 1 }]
   }
 };
