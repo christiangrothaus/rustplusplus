@@ -1,7 +1,6 @@
 import * as push from 'push-receiver';
 import * as fs from 'fs';
 
-
 export type SwitchPushNotification = {
   img: string,
   entityType: string,
@@ -17,7 +16,7 @@ export type SwitchPushNotification = {
   id: string,
   desc: string,
   playerId: string
-}
+};
 
 type NewSwitchCallback = (smartSwitch: SwitchPushNotification) => void;
 
@@ -39,7 +38,7 @@ type PushConfig = {
       appId: string
     }
   }
-}
+};
 
 export default class PushListener {
   config: PushConfig;

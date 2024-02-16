@@ -65,7 +65,7 @@ export default class State {
 
   private channelIdChangeCallbacks: Array<ChannelChangeCallbackModel> = [];
 
-  onChanelIdChange(callback: ChannelChangeCallbackModel): void {
+  onChannelIdChange(callback: ChannelChangeCallbackModel): void {
     this.channelIdChangeCallbacks.push(callback);
   }
 

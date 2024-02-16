@@ -286,7 +286,7 @@ export default class DiscordManager {
   }
 
   private registerStateListeners(): void {
-    this.state.onChanelIdChange((oldId) => {
+    this.state.onChannelIdChange((oldId) => {
       const oldChannel = this.discordClient.channels.cache.get(oldId) as TextChannel;
       oldChannel.messages.cache.sweep((message) => {
         if (message.author.id === this.discordClient.user?.id) {
