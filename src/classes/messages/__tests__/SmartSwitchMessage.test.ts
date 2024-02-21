@@ -1,7 +1,9 @@
-import { ActionRowBuilder, EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, EmbedBuilder, TextChannel } from 'discord.js';
 import SmartSwitchMessage from '../SmartSwitchMessage';
 
 describe('SmartSwitchMessage', () => {
+  const mockChannel = {} as TextChannel;
+
   describe('ctor', () => {
     it('should create a new instance of SmartSwitchMessage', () => {
       const entityInfo = {
@@ -9,7 +11,7 @@ describe('SmartSwitchMessage', () => {
         entityId: 'id',
         isActive: true
       };
-      const smartSwitchMessage = new SmartSwitchMessage(entityInfo);
+      const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
 
       expect(smartSwitchMessage.entityInfo).toEqual(entityInfo);
       expect(smartSwitchMessage.embeds).toHaveLength(1);
@@ -24,7 +26,7 @@ describe('SmartSwitchMessage', () => {
         entityId: 'id',
         isActive: true
       };
-      const smartSwitchMessage = new SmartSwitchMessage(entityInfo);
+      const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
       expect(embedBuilder).toBeInstanceOf(EmbedBuilder);
@@ -36,7 +38,7 @@ describe('SmartSwitchMessage', () => {
         entityId: 'id',
         isActive: true
       };
-      const smartSwitchMessage = new SmartSwitchMessage(entityInfo);
+      const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
       expect(embedBuilder.data.color).toBe(0x55ff55);
@@ -48,7 +50,7 @@ describe('SmartSwitchMessage', () => {
         entityId: 'id',
         isActive: false
       };
-      const smartSwitchMessage = new SmartSwitchMessage(entityInfo);
+      const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
       expect(embedBuilder.data.color).toBe(0xff5555);
@@ -60,7 +62,7 @@ describe('SmartSwitchMessage', () => {
         entityId: 'id',
         isActive: true
       };
-      const smartSwitchMessage = new SmartSwitchMessage(entityInfo);
+      const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
       expect(embedBuilder.data.fields[0].value).toBe('On');
@@ -72,7 +74,7 @@ describe('SmartSwitchMessage', () => {
         entityId: 'id',
         isActive: false
       };
-      const smartSwitchMessage = new SmartSwitchMessage(entityInfo);
+      const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
       expect(embedBuilder.data.fields[0].value).toBe('Off');
@@ -86,7 +88,7 @@ describe('SmartSwitchMessage', () => {
         entityId: 'id',
         isActive: true
       };
-      const smartSwitchMessage = new SmartSwitchMessage(entityInfo);
+      const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const actionRowBuilder = smartSwitchMessage.createMessageButtons(entityInfo);
 
       expect(actionRowBuilder).toBeInstanceOf(ActionRowBuilder);
