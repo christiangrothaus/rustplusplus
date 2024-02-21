@@ -1,7 +1,7 @@
 import * as push from 'push-receiver';
 import * as fs from 'fs';
 
-export type SwitchPushNotification = {
+export type PushNotification = {
   img: string,
   entityType: string,
   ip: string,
@@ -18,7 +18,7 @@ export type SwitchPushNotification = {
   playerId: string
 };
 
-type NewSwitchCallback = (smartSwitch: SwitchPushNotification) => void;
+type NewEntityCallback = (pushNotification: PushNotification) => void;
 
 type PushConfig = {
   fcm_credentials: {
@@ -45,7 +45,11 @@ export default class PushListener {
 
   listener;
 
-  private newSwitchCallbacks: Array<NewSwitchCallback> = [];
+  private newSwitchCallbacks: Array<NewEntityCallback> = [];
+
+  private newAlarmCallbacks: Array<NewEntityCallback> = [];
+
+  private newStorageMonitorCallbacks: Array<NewEntityCallback> = [];
 
   constructor() {
     this.config = this.loadConfig();
@@ -56,15 +60,27 @@ export default class PushListener {
     }
   }
 
-  onNewSwitch(callback: NewSwitchCallback): void {
+  onNewSwitch(callback: NewEntityCallback): void {
     this.newSwitchCallbacks.push(callback);
+  }
+
+  onNewAlarm(callback: NewEntityCallback): void {
+    this.newAlarmCallbacks.push(callback);
+  }
+
+  onNewStorageMonitor(callback: NewEntityCallback): void {
+    this.newStorageMonitorCallbacks.push(callback);
   }
 
   async start(): Promise<void> {
     this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
-      const body = JSON.parse(notification.data.body as string) as SwitchPushNotification;
+      const body = JSON.parse(notification.data.body as string) as PushNotification;
       if (body.entityName === 'Switch') {
         this.newSwitchCallbacks.forEach((callback) => callback(body));
+      } else if (body.entityName === 'Alarm') {
+        this.newAlarmCallbacks.forEach((callback) => callback(body));
+      } else if (body.entityName === 'StorageMonitor') {
+        this.newStorageMonitorCallbacks.forEach((callback) => callback(body));
       }
     });
   }

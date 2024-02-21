@@ -1,7 +1,7 @@
 export default class StorageMonitorEntityInfo {
-  public name: string;
+  name: string;
 
-  public entityId: string;
+  entityId: string;
 
-  public capacity?: number;
+  capacity?: number;
 }

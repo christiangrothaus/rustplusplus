@@ -1,13 +1,6 @@
-import { ActionRowBuilder, ButtonBuilder, EmbedBuilder, MessageCreateOptions } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, EmbedBuilder, Message, MessageCreateOptions, TextChannel } from 'discord.js';
 import { EntityType } from '../../models/RustPlus.models';
 import BaseEntityInfo from '../entityInfo/BaseEntityInfo';
-
-export type MessageJson<BaseEntityInfo> = {
-  entityInfo: BaseEntityInfo,
-  messageId: string,
-  channelId: string
-  entityType: EntityType
-};
 
 export default abstract class BaseSmartMessage<T extends BaseEntityInfo> implements MessageCreateOptions {
   public embeds: Array<EmbedBuilder>;
@@ -16,35 +9,34 @@ export default abstract class BaseSmartMessage<T extends BaseEntityInfo> impleme
 
   public entityInfo: T;
 
-  public messageId: string;
-
-  public channelId: string;
+  public message: Message;
 
   public abstract readonly entityType: EntityType;
 
+  protected channel: TextChannel;
+
   protected abstract ENTITY_IMAGE_URL: string;
 
-  constructor(entityInfo: T) {
+  constructor(channel: TextChannel, entityInfo: T) {
     this.entityInfo = entityInfo;
+    this.channel = channel;
 
     this.embeds = [this.createMessageEmbed(this.entityInfo)];
     this.components = [this.createMessageButtons(this.entityInfo)];
   }
 
-  public async update(entityInfo: Partial<T>): Promise<void> {
+  public async send(): Promise<Message<boolean>> {
+    this.message = await this.channel.send(this);
+    return this.message;
+  }
+
+  public async update(entityInfo: Partial<T>): Promise<Message<boolean>> {
     this.entityInfo = { ...this.entityInfo, ...entityInfo };
 
     this.embeds = [this.createMessageEmbed(this.entityInfo)];
     this.components = [this.createMessageButtons(this.entityInfo)];
-  }
 
-  public toJSON(): MessageJson<T> {
-    return {
-      entityInfo: this.entityInfo,
-      messageId: this.messageId,
-      channelId: this.channelId,
-      entityType: this.entityType
-    };
+    return await this.message.edit(this);
   }
 
   protected abstract createMessageEmbed(entityInfo: T): EmbedBuilder;

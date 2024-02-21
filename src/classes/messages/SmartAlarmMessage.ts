@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, TextChannel } from 'discord.js';
 import BaseSmartMessage from './BaseSmartMessage';
 import SmartAlarmEntityInfo from '../entityInfo/SmartAlarmEntityInfo';
 
@@ -7,16 +7,15 @@ export default class SmartAlarmMessage extends BaseSmartMessage<SmartAlarmEntity
 
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/smart-alarm.png';
 
-  constructor(entityInfo: SmartAlarmEntityInfo) {
-    super(entityInfo);
+  constructor(channel: TextChannel, entityInfo: SmartAlarmEntityInfo) {
+    super(channel, entityInfo);
   }
 
   createMessageEmbed(entityInfo: SmartAlarmEntityInfo): EmbedBuilder {
-    const { name, entityId, isActive } = entityInfo;
+    const { name, entityId } = entityInfo;
 
     const embedBuilder = new EmbedBuilder()
-      .setColor(isActive ? 0x55ff55 : 0xff5555)
-      .addFields({ name: 'Status', value: isActive ? 'Triggered' : 'Off' })
+      .setColor(0xff5555)
       .setTitle(name)
       .setFooter({ text: entityId })
       .setTimestamp()

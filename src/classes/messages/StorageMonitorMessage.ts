@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, TextChannel } from 'discord.js';
 import BaseSmartMessage from './BaseSmartMessage';
 import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
 
@@ -7,8 +7,8 @@ export default class StorageMonitorMessage extends BaseSmartMessage<StorageMonit
 
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/storage-monitor.png';
 
-  constructor(entityInfo: StorageMonitorEntityInfo) {
-    super(entityInfo);
+  constructor(channel: TextChannel,entityInfo: StorageMonitorEntityInfo) {
+    super(channel, entityInfo);
   }
 
   createMessageEmbed(entityInfo: StorageMonitorEntityInfo): EmbedBuilder {
@@ -16,7 +16,7 @@ export default class StorageMonitorMessage extends BaseSmartMessage<StorageMonit
 
     const embedBuilder = new EmbedBuilder()
       .setColor(0x2255ff)
-      .addFields({ name: 'Status', value: `${capacity}` })
+      .addFields({ name: 'Capacity', value: `${capacity}` })
       .setTitle(name)
       .setFooter({ text: entityId })
       .setTimestamp()

@@ -89,7 +89,8 @@ export default class RustPlusWrapper {
     });
 
     this.client.on('message', (msg: Message) => {
-      if (msg?.broadcast?.entityChanged) {
+      const entityChange = msg?.broadcast?.entityChanged;
+      if (entityChange) {
         this.entityChangeCallbacks.forEach((callback) => callback(msg?.broadcast?.entityChanged));
       }
     });
