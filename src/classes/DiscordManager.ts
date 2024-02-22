@@ -48,12 +48,9 @@ export default class DiscordManager {
   destroy(): void {
     this.state.save();
     this.discordClient.destroy();
+    this.pushListener.destroy();
 
     clearInterval(this.rustPlusKeepAliveId);
-
-    if (this.pushListener) {
-      this.pushListener.destroy();
-    }
 
     process.exit(1);
   }
@@ -64,7 +61,7 @@ export default class DiscordManager {
 
   private async initializeDiscord(): Promise<void> {
     this.discordClient = new DiscordWrapper();
-    this.discordClient.start();
+    await this.discordClient.start();
   }
 
   private initializeRustPlus(): void {

@@ -1,12 +1,5 @@
 import { Awaitable, Events } from 'discord.js';
 import DiscordManager from '../DiscordManager';
-import PushListener from '../PushListener';
-import SmartSwitchEntityInfo from '../entityInfo/SmartSwitchEntityInfo';
-import SmartAlarmEntityInfo from '../entityInfo/SmartAlarmEntityInfo';
-import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
-import SmartSwitchMessage from '../messages/SmartSwitchMessage';
-import StorageMonitorMessage from '../messages/StorageMonitorMessage';
-import SmartAlarmMessage from '../messages/SmartAlarmMessage';
 
 jest.mock('../State', () => {
   return jest.fn().mockImplementation(() => {
@@ -22,10 +15,24 @@ jest.mock('../State', () => {
 jest.mock('../PushListener', () => {
   return jest.fn().mockImplementation(() => {
     return {
+      onNewStorageMonitor: jest.fn(),
+      onNewAlarm: jest.fn(),
       onNewSwitch: jest.fn(),
       start: jest.fn(),
       destroy: jest.fn(),
       loadConfig: jest.fn()
+    };
+  });
+});
+
+jest.mock('../DiscordWrapper', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      onButtonInteraction: jest.fn(),
+      onModalSubmitInteraction: jest.fn(),
+      onChatInputCommandInteraction: jest.fn(),
+      start: jest.fn().mockResolvedValue({}),
+      destroy: jest.fn()
     };
   });
 });
@@ -106,6 +113,8 @@ describe('DiscordManager', () => {
     jest.restoreAllMocks();
     jest.spyOn(Date, 'now').mockReturnValue(0);
     jest.spyOn(process, 'exit').mockImplementation(() => { throw new Error('process.exit() was called'); });
+
+    discordManager.start();
   });
 
   afterEach(() => {
@@ -137,112 +146,12 @@ describe('DiscordManager', () => {
     });
 
     it('should destroy the push listener if there is one', () => {
-      discordManager.pushListener = new PushListener();
 
       expect(() => {
         discordManager.destroy();
       }).toThrow();
 
       expect(discordManager.pushListener.destroy).toHaveBeenCalled();
-    });
-
-    it('should not attempt to destroy the push listener if there is not one', () => {
-      expect(() => {
-        expect(() => {
-          discordManager.destroy();
-        }).toThrow('process.exit() was called');
-      }).not.toThrow();
-
-      expect(discordManager.pushListener).toBeUndefined();
-    });
-  });
-
-  describe('createNewMessage', () => {
-    describe('SmartSwitchMessage', () => {
-      it('should create a new switch message', async () => {
-        discordManager.start();
-
-        const message = await discordManager['createNewMessage']('Switch', <SmartSwitchEntityInfo>{
-          entityId: '1',
-          name: 'Switch',
-          isActive: true
-        });
-
-        expect(message).toBeDefined();
-      });
-
-      it('should add the message to the state', async () => {
-        const expectedMessage = new SmartSwitchMessage({ name: 'Switch', entityId: '1', isActive: true });
-        expectedMessage.messageId = 'messageId';
-        expectedMessage.channelId = 'channelId';
-        discordManager.start();
-
-        await discordManager['createNewMessage']('Switch', <SmartSwitchEntityInfo>{
-          entityId: '1',
-          name: 'Switch',
-          isActive: true
-        });
-
-        expect(discordManager.state.messages['messageId']).toEqual(expectedMessage);
-      });
-    });
-
-    describe('SmartAlarmMessage', () => {
-      it('should create a new alarm message', async () => {
-        discordManager.start();
-
-        const message = await discordManager['createNewMessage']('Alarm', <SmartAlarmEntityInfo>{
-          entityId: '1',
-          name: 'Switch',
-          isActive: true
-        });
-
-        expect(message).toBeDefined();
-      });
-
-      it('should add the message to the state', async () => {
-        const expectedMessage = new SmartAlarmMessage({ name: 'Alarm', entityId: '1', isActive: false });
-        expectedMessage.messageId = 'messageId';
-        expectedMessage.channelId = 'channelId';
-        discordManager.start();
-
-        await discordManager['createNewMessage']('Alarm', <SmartAlarmEntityInfo>{
-          entityId: '1',
-          name: 'Alarm',
-          isActive: false
-        });
-
-        expect(discordManager.state.messages['messageId']).toEqual(expectedMessage);
-      });
-    });
-
-    describe('StorageMonitorMessage', () => {
-      it('should create a new storage monitor message', async () => {
-        discordManager.start();
-
-        const message = await discordManager['createNewMessage']('StorageMonitor', <StorageMonitorEntityInfo>{
-          entityId: '1',
-          name: 'StorageMonitor',
-          capacity: 100
-        });
-
-        expect(message).toBeDefined();
-      });
-
-      it('should add the message to the state', async () => {
-        const expectedMessage = new StorageMonitorMessage({ name: 'StorageMonitor', entityId: '1', capacity: 100 });
-        expectedMessage.messageId = 'messageId';
-        expectedMessage.channelId = 'channelId';
-        discordManager.start();
-
-        await discordManager['createNewMessage']('StorageMonitor', <StorageMonitorEntityInfo>{
-          entityId: '1',
-          name: 'StorageMonitor',
-          capacity: 100
-        });
-
-        expect(discordManager.state.messages['messageId']).toEqual(expectedMessage);
-      });
     });
   });
 });

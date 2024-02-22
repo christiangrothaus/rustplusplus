@@ -45,7 +45,7 @@ export default class DiscordWrapper {
 
   async start() {
     this.registerListeners();
-    this.client.login(process.env.DISCORD_TOKEN);
+    await this.client.login(process.env.DISCORD_TOKEN);
   }
 
   async destroy() {
