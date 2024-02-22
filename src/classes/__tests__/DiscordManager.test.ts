@@ -1,5 +1,5 @@
 import { Awaitable, Events } from 'discord.js';
-import DiscordManager from '../DiscordManager';
+import Manager from '../Manager';
 
 jest.mock('../State', () => {
   return jest.fn().mockImplementation(() => {
@@ -104,10 +104,10 @@ jest.mock('discord.js', () => {
 });
 
 describe('DiscordManager', () => {
-  let discordManager: DiscordManager;
+  let discordManager: Manager;
 
   beforeEach(() => {
-    discordManager = new DiscordManager();
+    discordManager = new Manager();
 
     jest.clearAllMocks();
     jest.restoreAllMocks();
@@ -125,7 +125,7 @@ describe('DiscordManager', () => {
 
   describe('ctor', () => {
     it('should create a new instance of DiscordManager', () => {
-      expect(discordManager).toBeInstanceOf(DiscordManager);
+      expect(discordManager).toBeInstanceOf(Manager);
     });
   });
 

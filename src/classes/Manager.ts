@@ -16,7 +16,7 @@ import RustPlusWrapper from './RustPlusWrapper';
 import { EntityChanged } from '../models/RustPlus.models';
 import DiscordWrapper from './DiscordWrapper';
 
-export default class DiscordManager {
+export default class Manager {
   discordClient: DiscordWrapper;
 
   rustPlus: RustPlusWrapper;

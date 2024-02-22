@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import DiscordManager from './src/classes/DiscordManager';
+import Manager from './src/classes/Manager';
 
-export const discordManager = new DiscordManager();
+export const manager = new Manager();
 
-discordManager.start();
+manager.start();
 
-process.on('SIGTERM', () => discordManager.destroy());
-process.on('SIGINT', () => discordManager.destroy());
-process.on('uncaughtException', () => discordManager.destroy());
+process.on('SIGTERM', () => manager.destroy());
+process.on('SIGINT', () => manager.destroy());
+process.on('uncaughtException', () => manager.destroy());

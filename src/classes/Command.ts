@@ -1,8 +1,8 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import DiscordManager from './DiscordManager';
+import Manager from './Manager';
 
 export type CommandData = SlashCommandBuilder | Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
-export type CommandExecute = (interation: ChatInputCommandInteraction, discordManager: DiscordManager) => Promise<void>;
+export type CommandExecute = (interation: ChatInputCommandInteraction, discordManager: Manager) => Promise<void>;
 
 export default class Command {
   data: CommandData;
