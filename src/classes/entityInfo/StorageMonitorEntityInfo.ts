@@ -2,7 +2,7 @@ import { EntityType } from '../../models/RustPlus.models';
 import BaseEntityInfo from './BaseEntityInfo';
 
 export default class StorageMonitorEntityInfo extends BaseEntityInfo {
-  entityType: EntityType = 'StorageMonitor';
+  entityType: EntityType = EntityType.StorageMonitor;
 
   capacity?: number;
 

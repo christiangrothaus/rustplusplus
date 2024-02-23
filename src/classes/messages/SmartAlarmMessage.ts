@@ -1,9 +1,10 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, TextChannel } from 'discord.js';
 import BaseSmartMessage from './BaseSmartMessage';
 import SmartAlarmEntityInfo from '../entityInfo/SmartAlarmEntityInfo';
+import { EntityType } from '../../models/RustPlus.models';
 
 export default class SmartAlarmMessage extends BaseSmartMessage<SmartAlarmEntityInfo> {
-  public readonly entityType = 'Alarm';
+  public readonly entityType = EntityType.Alarm;
 
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/smart-alarm.png';
 

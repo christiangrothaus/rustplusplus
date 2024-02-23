@@ -1,9 +1,10 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, TextChannel } from 'discord.js';
 import BaseSmartMessage from './BaseSmartMessage';
 import SmartSwitchEntityInfo from '../entityInfo/SmartSwitchEntityInfo';
+import { EntityType } from '../../models/RustPlus.models';
 
 export default class SmartSwitchMessage extends BaseSmartMessage<SmartSwitchEntityInfo> {
-  public readonly entityType = 'Switch';
+  public readonly entityType = EntityType.Switch;
 
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/smart-switch.png';
 

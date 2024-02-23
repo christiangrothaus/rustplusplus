@@ -1,9 +1,10 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, TextChannel } from 'discord.js';
 import BaseSmartMessage from './BaseSmartMessage';
 import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
+import { EntityType } from '../../models/RustPlus.models';
 
 export default class StorageMonitorMessage extends BaseSmartMessage<StorageMonitorEntityInfo> {
-  public readonly entityType = 'StorageMonitor';
+  public readonly entityType = EntityType.StorageMonitor;
 
   protected ENTITY_IMAGE_URL = 'https://raw.githubusercontent.com/christiangrothaus/rustplusplus/main/src/assets/images/storage-monitor.png';
 
