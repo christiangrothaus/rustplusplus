@@ -57,7 +57,7 @@ export default class State {
     try {
       fs.writeFileSync(SAVE_DATA_PATH, json, 'utf-8');
     } catch (e) {
-      console.log('Failed to save data.', e);
+      throw new Error('Failed to save data: ' + e.message);
     }
   }
 
@@ -117,6 +117,12 @@ export default class State {
       }
     }
 
+    const msg = await this.attemptToSendMessage(message, messageId);
+
+    return msg;
+  }
+
+  private async attemptToSendMessage(message: BaseSmartMessage<BaseEntityInfo>, messageId?: string): Promise<BaseSmartMessage<BaseEntityInfo>> {
     if (messageId) {
       try {
         const discordMessage = await message.channel.messages.fetch(messageId);

@@ -1,5 +1,9 @@
 
-export type EntityType = 'Switch' | 'Alarm' | 'StorageMonitor';
+export enum EntityType {
+  Switch = 'Switch',
+  Alarm = 'Alarm',
+  StorageMonitor = 'StorageMonitor'
+}
 
 export type TeamInfoMember = {
   steamId: number,

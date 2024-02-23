@@ -2,7 +2,7 @@ import { EntityType } from '../../models/RustPlus.models';
 import BaseEntityInfo from './BaseEntityInfo';
 
 export default class SmartSwitchEntityInfo extends BaseEntityInfo {
-  entityType: EntityType = 'Switch';
+  entityType: EntityType = EntityType.Switch;
 
   isActive?: boolean;
 
