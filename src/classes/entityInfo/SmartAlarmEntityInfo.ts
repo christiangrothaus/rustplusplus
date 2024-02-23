@@ -1,7 +1,11 @@
+import { EntityType } from '../../models/RustPlus.models';
 import BaseEntityInfo from './BaseEntityInfo';
 
-export default class SmartAlarmEntityInfo implements BaseEntityInfo {
-  name: string;
+export default class SmartAlarmEntityInfo extends BaseEntityInfo {
 
-  entityId: string;
+  entityType: EntityType = 'Alarm';
+
+  constructor(name: string, entityId: string) {
+    super(name, entityId);
+  }
 }

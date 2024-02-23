@@ -1,5 +1,6 @@
 import { ActionRowBuilder, EmbedBuilder, TextChannel } from 'discord.js';
 import SmartSwitchMessage from '../SmartSwitchMessage';
+import SmartSwitchEntityInfo from '../../entityInfo/SmartSwitchEntityInfo';
 
 describe('SmartSwitchMessage', () => {
   const mockChannel = {} as TextChannel;
@@ -9,8 +10,9 @@ describe('SmartSwitchMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        isActive: true
-      };
+        isActive: true,
+        entityType: 'Switch'
+      } as SmartSwitchEntityInfo;
       const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
 
       expect(smartSwitchMessage.entityInfo).toEqual(entityInfo);
@@ -24,8 +26,9 @@ describe('SmartSwitchMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        isActive: true
-      };
+        isActive: true,
+        entityType: 'Switch'
+      } as SmartSwitchEntityInfo;
       const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
@@ -36,8 +39,9 @@ describe('SmartSwitchMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        isActive: true
-      };
+        isActive: true,
+        entityType: 'Switch'
+      } as SmartSwitchEntityInfo;
       const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
@@ -45,11 +49,7 @@ describe('SmartSwitchMessage', () => {
     });
 
     it('should set the color to red if isActive is false', () => {
-      const entityInfo = {
-        name: 'name',
-        entityId: 'id',
-        isActive: false
-      };
+      const entityInfo = new SmartSwitchEntityInfo('name', 'id', false);
       const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
@@ -60,8 +60,9 @@ describe('SmartSwitchMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        isActive: true
-      };
+        isActive: true,
+        entityType: 'Switch'
+      } as SmartSwitchEntityInfo;
       const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
@@ -72,8 +73,9 @@ describe('SmartSwitchMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        isActive: false
-      };
+        isActive: false,
+        entityType: 'Switch'
+      } as SmartSwitchEntityInfo;
       const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const embedBuilder = smartSwitchMessage.createMessageEmbed(entityInfo);
 
@@ -86,8 +88,9 @@ describe('SmartSwitchMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        isActive: true
-      };
+        isActive: true,
+        entityType: 'Switch'
+      } as SmartSwitchEntityInfo;
       const smartSwitchMessage = new SmartSwitchMessage(mockChannel, entityInfo);
       const actionRowBuilder = smartSwitchMessage.createMessageButtons(entityInfo);
 

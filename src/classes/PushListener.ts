@@ -1,9 +1,10 @@
 import * as push from 'push-receiver';
 import * as fs from 'fs';
+import { EntityType } from '../models/RustPlus.models';
 
 export type PushNotification = {
   img: string,
-  entityType: string,
+  entityType: EntityType,
   ip: string,
   entityId: string,
   type: string,
@@ -18,7 +19,7 @@ export type PushNotification = {
   playerId: string
 };
 
-type NewEntityCallback = (pushNotification: PushNotification) => void;
+type EntityCallback = (pushNotification: PushNotification) => void;
 
 type PushConfig = {
   fcm_credentials: {
@@ -45,43 +46,24 @@ export default class PushListener {
 
   listener;
 
-  private newSwitchCallbacks: Array<NewEntityCallback> = [];
-
-  private newAlarmCallbacks: Array<NewEntityCallback> = [];
-
-  private newStorageMonitorCallbacks: Array<NewEntityCallback> = [];
+  private entityPushCallbacks: Array<EntityCallback> = [];
 
   constructor() {
     this.config = this.loadConfig();
 
     if (!this.config.fcm_credentials){
-      console.error('FCM Credentials missing. Please run `fcm-register` first.');
-      process.exit(1);
+      throw new Error('FCM Credentials missing. Please run `fcm-register` first.');
     }
   }
 
-  onNewSwitch(callback: NewEntityCallback): void {
-    this.newSwitchCallbacks.push(callback);
-  }
-
-  onNewAlarm(callback: NewEntityCallback): void {
-    this.newAlarmCallbacks.push(callback);
-  }
-
-  onNewStorageMonitor(callback: NewEntityCallback): void {
-    this.newStorageMonitorCallbacks.push(callback);
+  onEntityPush(callback: EntityCallback): void {
+    this.entityPushCallbacks.push(callback);
   }
 
   async start(): Promise<void> {
     this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
       const body = JSON.parse(notification.data.body as string) as PushNotification;
-      if (body.entityName === 'Switch') {
-        this.newSwitchCallbacks.forEach((callback) => callback(body));
-      } else if (body.entityName === 'Alarm') {
-        this.newAlarmCallbacks.forEach((callback) => callback(body));
-      } else if (body.entityName === 'StorageMonitor') {
-        this.newStorageMonitorCallbacks.forEach((callback) => callback(body));
-      }
+      this.entityPushCallbacks.forEach((callback) => callback(body));
     });
   }
 
@@ -89,12 +71,11 @@ export default class PushListener {
     this.listener.destroy();
   }
 
-  private loadConfig(): PushConfig | undefined {
+  private loadConfig(): PushConfig {
     try {
       return JSON.parse(fs.readFileSync('rustplus.config.json', 'utf-8'));
     } catch (err) {
-      console.log('Failed to load config.');
-      return undefined;
+      throw new Error('Failed to load rustplus.config.json');
     }
   }
 }

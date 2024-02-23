@@ -21,16 +21,36 @@ import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
 import BaseSmartMessage from './messages/BaseSmartMessage';
 import BaseEntityInfo from './entityInfo/BaseEntityInfo';
 
+export type RustChannels = {
+  switchChannel: TextChannel,
+  notificationChannel : TextChannel
+};
+
+export type ChannelReadyCallbacks = (channels: RustChannels) => void;
 export default class DiscordWrapper {
   client: Client;
 
   commandManager: CommandManager;
 
-  notificationChannel: TextChannel;
-
-  switchChannel: TextChannel;
-
   messages: Map<string, BaseSmartMessage<BaseEntityInfo>>;
+
+  set notificationChannel(channel: TextChannel) {
+    this._notificationChannel = channel;
+    this.checkChannelsReady();
+  }
+
+  get notificationChannel(): TextChannel {
+    return this._notificationChannel;
+  }
+
+  set switchChannel(channel: TextChannel) {
+    this._switchChannel = channel;
+    this.checkChannelsReady();
+  }
+
+  get switchChannel(): TextChannel {
+    return this._switchChannel;
+  }
 
   private modalSubmitCallbacks: Array<(interaction: ModalSubmitInteraction) => void> = [];
 
@@ -38,9 +58,14 @@ export default class DiscordWrapper {
 
   private buttonCallbacks: Array<(interaction: ButtonInteraction) => void> = [];
 
+  private channelsReadyCallbacks: Array<ChannelReadyCallbacks> = [];
+
+  private _notificationChannel: TextChannel;
+
+  private _switchChannel: TextChannel;
+
   constructor() {
     this.client = new Client({ intents: [ GatewayIntentBits.Guilds] });
-    this.commandManager = new CommandManager();
   }
 
   async start() {
@@ -94,6 +119,14 @@ export default class DiscordWrapper {
     this.messages.delete(entityId);
   }
 
+  public onChannelsReady(callback: (channel: RustChannels) => void) {
+    if (this.switchChannel && this.notificationChannel) {
+      callback({ switchChannel: this.switchChannel, notificationChannel: this.notificationChannel });
+    } else {
+      this.channelsReadyCallbacks.push(callback);
+    }
+  }
+
   private async createChannels(guildId: string) {
     const guild = await this.client.guilds.fetch(guildId);
 
@@ -133,15 +166,9 @@ export default class DiscordWrapper {
   }
 
   private registerListeners() {
-    this.client.once(Events.ClientReady, async () => {
-      this.commandManager.refreshSlashCommands(); // When the bot restarts, refresh the registered slash commands
-      const guilds = await this.client.guilds.fetch(); // Fetch all guilds the bot is in
-      guilds.forEach((guild) => this.createChannels(guild.id)); // Create channels for each guild
-    });
-
     this.client.once(Events.GuildCreate, (guild) => {
       this.createChannels(guild.id);
-      this.commandManager.refreshSlashCommands(); // When the bot first joins a server, set the slash commands
+      this.commandManager = new CommandManager(guild.id);
     });
 
     this.client.on(Events.InteractionCreate, async (interaction) => {
@@ -153,5 +180,12 @@ export default class DiscordWrapper {
         this.chatInputCommandCallbacks.forEach((callback) => callback(interaction as ChatInputCommandInteraction));
       }
     });
+  }
+
+  private checkChannelsReady() {
+    if (this.switchChannel && this.notificationChannel) {
+      this.channelsReadyCallbacks.forEach((callback) => callback({ switchChannel: this.switchChannel, notificationChannel: this.notificationChannel }));
+      this.channelsReadyCallbacks = [];
+    }
   }
 }

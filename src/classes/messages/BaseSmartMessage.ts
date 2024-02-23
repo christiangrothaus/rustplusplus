@@ -2,6 +2,11 @@ import { ActionRowBuilder, ButtonBuilder, EmbedBuilder, Message, MessageCreateOp
 import { EntityType } from '../../models/RustPlus.models';
 import BaseEntityInfo from '../entityInfo/BaseEntityInfo';
 
+export type MessageData = {
+  messageId?: string;
+  entityInfo: BaseEntityInfo;
+};
+
 export default abstract class BaseSmartMessage<T extends BaseEntityInfo> implements MessageCreateOptions {
   public embeds: Array<EmbedBuilder>;
 
@@ -11,9 +16,9 @@ export default abstract class BaseSmartMessage<T extends BaseEntityInfo> impleme
 
   public message: Message;
 
-  public abstract readonly entityType: EntityType;
+  public channel: TextChannel;
 
-  protected channel: TextChannel;
+  public abstract readonly entityType: EntityType;
 
   protected abstract ENTITY_IMAGE_URL: string;
 
@@ -31,12 +36,23 @@ export default abstract class BaseSmartMessage<T extends BaseEntityInfo> impleme
   }
 
   public async update(entityInfo: Partial<T>): Promise<Message<boolean>> {
+    if (!this.message) {
+      throw new Error('Message not sent yet');
+    }
+
     this.entityInfo = { ...this.entityInfo, ...entityInfo };
 
     this.embeds = [this.createMessageEmbed(this.entityInfo)];
     this.components = [this.createMessageButtons(this.entityInfo)];
 
     return await this.message.edit(this);
+  }
+
+  public toJSON(): MessageData {
+    return {
+      messageId: this.message.id,
+      entityInfo: this.entityInfo
+    };
   }
 
   protected abstract createMessageEmbed(entityInfo: T): EmbedBuilder;

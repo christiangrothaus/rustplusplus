@@ -15,6 +15,7 @@ import Command from './Command';
 import RustPlusWrapper from './RustPlusWrapper';
 import { EntityChanged } from '../models/RustPlus.models';
 import DiscordWrapper from './DiscordWrapper';
+import { MessageData } from './messages/BaseSmartMessage';
 
 export default class Manager {
   discordClient: DiscordWrapper;
@@ -56,7 +57,7 @@ export default class Manager {
   }
 
   private loadState(): void {
-    this.state.loadFromSave();
+    this.state.loadFromSave(this.discordClient);
   }
 
   private async initializeDiscord(): Promise<void> {
@@ -140,8 +141,6 @@ export default class Manager {
           break;
         }
       }
-
-      return;
     });
 
     this.discordClient.onModalSubmitInteraction(async (interaction: ModalSubmitInteraction) => {
@@ -204,16 +203,18 @@ export default class Manager {
   }
 
   private registerPushListeners(): void {
-    this.pushListener.onNewSwitch(async (switchPushNotification) => {
-      this.discordClient.sendSwitchMessage(switchPushNotification);
-    });
+    this.pushListener.onEntityPush(async (pushNotif) => {
+      this.discordClient.onChannelsReady((channels) => {
+        const messageData: MessageData = {
+          entityInfo: {
+            entityId: pushNotif.entityId,
+            entityType: pushNotif.entityType,
+            name: pushNotif.name
+          }
+        };
 
-    this.pushListener.onNewAlarm(async (alarmPushNotification) => {
-      this.discordClient.sendAlarmMessage(alarmPushNotification);
-    });
-
-    this.pushListener.onNewStorageMonitor(async (storageMonitorPushNotification) => {
-      this.discordClient.sendStorageMessage(storageMonitorPushNotification);
+        this.state.createMessageFromData(channels, messageData);
+      });
     });
   }
 

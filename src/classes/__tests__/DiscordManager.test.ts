@@ -15,9 +15,7 @@ jest.mock('../State', () => {
 jest.mock('../PushListener', () => {
   return jest.fn().mockImplementation(() => {
     return {
-      onNewStorageMonitor: jest.fn(),
-      onNewAlarm: jest.fn(),
-      onNewSwitch: jest.fn(),
+      onEntityPush: jest.fn(),
       start: jest.fn(),
       destroy: jest.fn(),
       loadConfig: jest.fn()

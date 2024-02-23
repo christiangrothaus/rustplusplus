@@ -1,7 +1,14 @@
-export default class StorageMonitorEntityInfo {
-  name: string;
+import { EntityType } from '../../models/RustPlus.models';
+import BaseEntityInfo from './BaseEntityInfo';
 
-  entityId: string;
+export default class StorageMonitorEntityInfo extends BaseEntityInfo {
+  entityType: EntityType = 'StorageMonitor';
 
   capacity?: number;
+
+  constructor(name: string, entityId: string, capacity?: number) {
+    super(name, entityId);
+
+    this.capacity = capacity;
+  }
 }

@@ -1,16 +1,14 @@
 import { ActionRowBuilder, EmbedBuilder, TextChannel } from 'discord.js';
 import SmartAlarmMessage from '../SmartAlarmMessage';
+import SmartAlarmEntityInfo from '../../entityInfo/SmartAlarmEntityInfo';
 
 describe('SmartAlarmMessage', () => {
   const mockChannel = {} as TextChannel;
 
   describe('ctor', () => {
     it('should create a new instance of SmartAlarmMessage', () => {
-      const entityInfo = {
-        name: 'name',
-        entityId: 'id'
-      };
-      const smartAlarmMessage = new SmartAlarmMessage(mockChannel ,entityInfo);
+      const entityInfo = new SmartAlarmEntityInfo('name', 'id');
+      const smartAlarmMessage = new SmartAlarmMessage(mockChannel, entityInfo);
 
       expect(smartAlarmMessage.entityInfo).toEqual(entityInfo);
       expect(smartAlarmMessage.embeds).toHaveLength(1);
@@ -20,10 +18,7 @@ describe('SmartAlarmMessage', () => {
 
   describe('createMessageEmbed', () => {
     it('should create a new EmbedBuilder', () => {
-      const entityInfo = {
-        name: 'name',
-        entityId: 'id'
-      };
+      const entityInfo = new SmartAlarmEntityInfo('name', 'id');
       const smartAlarmMessage = new SmartAlarmMessage(mockChannel, entityInfo);
       const embedBuilder = smartAlarmMessage.createMessageEmbed(entityInfo);
 
@@ -31,10 +26,7 @@ describe('SmartAlarmMessage', () => {
     });
 
     it('should set the color to red', () => {
-      const entityInfo = {
-        name: 'name',
-        entityId: 'id'
-      };
+      const entityInfo = new SmartAlarmEntityInfo('name', 'id');
       const smartAlarmMessage = new SmartAlarmMessage(mockChannel, entityInfo);
       const embedBuilder = smartAlarmMessage.createMessageEmbed(entityInfo);
 
@@ -44,10 +36,7 @@ describe('SmartAlarmMessage', () => {
 
   describe('createMessageButtons', () => {
     it('should create a new ActionRowBuilder', () => {
-      const entityInfo = {
-        name: 'name',
-        entityId: 'id'
-      };
+      const entityInfo = new SmartAlarmEntityInfo('name', 'id');
       const smartAlarmMessage = new SmartAlarmMessage(mockChannel, entityInfo);
       const actionRowBuilder = smartAlarmMessage.createMessageButtons(entityInfo);
 

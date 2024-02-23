@@ -7,13 +7,9 @@ export default class CommandManager {
 
   commands: Collection<string, Command>;
 
-  constructor() {
+  constructor(guildId: string) {
     this.loadCommands();
-    this.refreshSlashCommands();
-  }
-
-  refreshSlashCommands(): void {
-    this.setSlashCommands('guildId');
+    this.setSlashCommands(guildId);
   }
 
   private async setSlashCommands(guildId: string): Promise<boolean> {

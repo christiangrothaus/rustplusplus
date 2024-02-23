@@ -1,5 +1,6 @@
 import { ActionRowBuilder, EmbedBuilder, TextChannel } from 'discord.js';
 import StorageMonitorMessage from '../StorageMonitorMessage';
+import StorageMonitorEntityInfo from '../../entityInfo/StorageMonitorEntityInfo';
 
 describe('StorageMonitorMessage', () => {
   const mockChannel = {} as TextChannel;
@@ -9,8 +10,9 @@ describe('StorageMonitorMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        capacity: 100
-      };
+        capacity: 100,
+        entityType: 'StorageMonitor'
+      } as StorageMonitorEntityInfo;
       const storageMonitorMessage = new StorageMonitorMessage(mockChannel, entityInfo);
 
       expect(storageMonitorMessage.entityInfo).toEqual(entityInfo);
@@ -24,8 +26,9 @@ describe('StorageMonitorMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        capacity: 100
-      };
+        capacity: 100,
+        entityType: 'StorageMonitor'
+      } as StorageMonitorEntityInfo;
       const storageMonitorMessage = new StorageMonitorMessage(mockChannel, entityInfo);
       const embedBuilder = storageMonitorMessage.createMessageEmbed(entityInfo);
 
@@ -36,8 +39,9 @@ describe('StorageMonitorMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        capacity: 100
-      };
+        capacity: 100,
+        entityType: 'StorageMonitor'
+      } as StorageMonitorEntityInfo;
       const storageMonitorMessage = new StorageMonitorMessage(mockChannel, entityInfo);
       const embedBuilder = storageMonitorMessage.createMessageEmbed(entityInfo);
 
@@ -50,8 +54,9 @@ describe('StorageMonitorMessage', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        capacity: 100
-      };
+        capacity: 100,
+        entityType: 'StorageMonitor'
+      } as StorageMonitorEntityInfo;
       const storageMonitorMessage = new StorageMonitorMessage(mockChannel, entityInfo);
       const actionRowBuilder = storageMonitorMessage.createMessageButtons(entityInfo);
 
