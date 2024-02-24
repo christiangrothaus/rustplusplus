@@ -169,6 +169,7 @@ export default class DiscordWrapper {
     this.client.once(Events.GuildCreate, (guild) => {
       this.createChannels(guild.id);
       this.commandManager = new CommandManager(guild.id);
+      this.commandManager.loadCommands();
     });
 
     this.client.on(Events.InteractionCreate, async (interaction) => {
