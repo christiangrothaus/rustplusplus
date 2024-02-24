@@ -3,6 +3,8 @@
 
 name: Run Tests
 
+permissions: write-all
+
 on:
   push:
     branches: [ "main" ]
