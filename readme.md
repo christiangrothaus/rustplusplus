@@ -1,4 +1,4 @@
-<div align="center"><img src="https://raw.githubusercontent.com/christiangrothaus/rustplusplus/8870df4093cac338712f2703ae75aaa77fdb7bee/src/assets/images/rust-plus-plus-logo.svg"></img></div>
+<div align="center"><img src="/src/assets/images/rust-plus-plus-logo.svg"></img></div>
 
 <br>
 
