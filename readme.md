@@ -1,4 +1,4 @@
-![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/christiangrothaus/831eac19a71961961077dfb8d00f7224/raw/jest-coverage.json)
+<a href="https://github.com/christiangrothaus/rustplusplus/actions">![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/christiangrothaus/831eac19a71961961077dfb8d00f7224/raw/jest-coverage.json)</a>
 <a href="https://github.com/christiangrothaus/rustplusplus/blob/main/LICENSE">![license](https://img.shields.io/badge/License-MIT-purple)</a>
 
 
