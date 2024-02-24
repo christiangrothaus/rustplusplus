@@ -17,7 +17,7 @@ export default class CommandManager {
     try {
       // Grab all the command folders from the commands directory you created earlier
       const commandsPath = path.join(__dirname, '../commands');
-      const commandFiles = fs.readdirSync(commandsPath);
+      const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts'));
       for (const file of commandFiles) {
         // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
         const filePath = path.join(commandsPath, file);
