@@ -27,8 +27,8 @@ export const execute: CommandExecute = async (interaction, discordManager) => {
     return;
   }
 
-  if (port) {
-    if (port < 1 || port > 65535) {
+  if (typeof port === 'number') {
+    if (port < 1 || port > 65535 - RUST_PLUS_SERVER_PORT_OFFSET) {
       interaction.reply({ content: 'Invalid port number', ephemeral: true });
       return;
     }
