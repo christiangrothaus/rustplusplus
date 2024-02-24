@@ -7,7 +7,7 @@
   "scripts": {
     "start": "ts-node index.ts",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage --coverageReporters json-summary"
   },
   "author": "",
   "license": "MIT",
