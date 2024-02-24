@@ -32,20 +32,23 @@ export default class RustPlusWrapper {
   }
 
   public async getEntityInfo(entityId: string): Promise<EntityInfo> {
-    if (!this.client) {
-      console.log('Failed to get entity info. Client not connected.');
-      return;
-    }
     return new Promise((resolve) => {
+      if (!this.client) {
+        throw new Error('Failed to get entity info. Client not connected.');
+      }
+
       this.client.getEntityInfo(entityId, (message: Message) => {
         resolve(message?.response?.entityInfo);
       });
     });
   }
 
-  public async toggleSmartSwitch(entityId: string, on: boolean): Promise<any> {
-    if (!this.client) { return; }
+  public async toggleSmartSwitch(entityId: string, on: boolean): Promise<Message> {
     return new Promise((resolve, reject) => {
+      if (!this.client) {
+        throw new Error('Failed to toggle smart switch. Client not connected.');
+      }
+
       const timeoutId = setTimeout(() => {
         reject('Request timed out');
       }, 3000);
@@ -84,16 +87,20 @@ export default class RustPlusWrapper {
   }
 
   private registerListeners(): void {
-    this.client.on('connected', () => {
-      this.connectedCallbacks.forEach((callback) => callback());
-    });
+    this.client.on('connected', this.callConnectedCallbacks);
 
-    this.client.on('message', (msg: Message) => {
-      const entityChange = msg?.broadcast?.entityChanged;
-      if (entityChange) {
-        this.entityChangeCallbacks.forEach((callback) => callback(msg?.broadcast?.entityChanged));
-      }
-    });
+    this.client.on('message', this.callEntityChangeCallbacks);
+  }
+
+  private callEntityChangeCallbacks(message: Message): void {
+    const entityChange = message?.broadcast?.entityChanged;
+    if (entityChange) {
+      this.entityChangeCallbacks.forEach((callback) => callback(message?.broadcast?.entityChanged));
+    }
+  }
+
+  private callConnectedCallbacks(): void {
+    this.connectedCallbacks.forEach((callback) => callback());
   }
 
   private getErrorMessage(message: Message): string | undefined {
@@ -105,6 +112,6 @@ export default class RustPlusWrapper {
       }
     }
 
-    return;
+    return error;
   }
 }
