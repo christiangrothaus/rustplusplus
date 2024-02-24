@@ -27,4 +27,17 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm install
-    - run: npm test
+    - run: npm test:coverage
+    - name: Jest Coverage Comment
+      uses: MishaKav/jest-coverage-comment@main
+    - name: Create the badge
+      if: github.ref == 'refs/heads/main'
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      with:
+        auth: ${{ secrets.JEST_COVERAGE_COMMENT }}
+        gistID: 5e90d640f8c212ab7bbac38f72323f80
+        filename: jest-coverage-comment__main.json
+        label: Coverage
+        message: ${{ steps.coverageComment.outputs.coverage }}%
+        color: ${{ steps.coverageComment.outputs.color }}
+        namedLogo: javascript
