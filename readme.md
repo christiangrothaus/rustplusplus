@@ -1,4 +1,4 @@
-![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/christiangrothaus/831eac19a71961961077dfb8d00f7224/raw/test.json)
+![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/christiangrothaus/831eac19a71961961077dfb8d00f7224/raw/847a0336b6e0ec14c149f41ef4a8c9b9f16d32aa/jest-coverage-comment__main.json)
 
 # WIP
 
