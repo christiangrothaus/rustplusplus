@@ -1,4 +1,7 @@
-![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/christiangrothaus/831eac19a71961961077dfb8d00f7224/raw/jest-coverage.json)
+![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/christiangrothaus/831eac19a71961961077dfb8d00f7224/raw/jest-coverage.json)
+![license](https://img.shields.io/badge/License-MIT-purple?link=https%3A%2F%2Fgithub.com%2Fchristiangrothaus%2Frustplusplus%2Fblob%2Fmain%2FLICENSE)
+
+
 
 # WIP
 
