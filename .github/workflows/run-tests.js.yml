@@ -31,6 +31,7 @@ jobs:
     - run: npm install
     - run: npm run test:coverage
     - name: Jest Coverage Comment
+      id: coverageComment
       uses: MishaKav/jest-coverage-comment@main
     - name: Create the badge
       if: github.ref == 'refs/heads/main'
