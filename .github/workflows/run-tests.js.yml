@@ -42,5 +42,7 @@ jobs:
         filename: jest-coverage.json
         label: Coverage
         message: ${{ steps.coverageComment.outputs.coverage }}%
-        color: ${{ steps.coverageComment.outputs.color }}
+        valColorRange: ${{ steps.coverageComment.outputs.coverage }}
+        minColorRange: 50
+        maxColorRange: 90
         namedLogo: jest
