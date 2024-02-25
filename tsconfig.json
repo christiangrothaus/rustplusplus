@@ -1,9 +1,9 @@
 {   
   "compilerOptions": {
     "esModuleInterop": true,
-    "target": "es2022",
-    "module": "es2022",
-    "moduleResolution": "node"
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   },
   "include": ["./**/*.ts", "./.eslintrc.js"]
 }
