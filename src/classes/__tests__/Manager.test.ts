@@ -51,6 +51,12 @@ jest.mock('../PushRegister', () => {
   });
 });
 
+jest.mock('prompt-sync', () => {
+  return jest.fn().mockImplementation(() => {
+    return jest.fn().mockImplementation(() => 'envvar');
+  });
+});
+
 jest.mock('../DiscordWrapper', () => {
   return jest.fn().mockImplementation(() => {
     return {
