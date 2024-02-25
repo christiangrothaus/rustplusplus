@@ -6,8 +6,8 @@
   "types": "index",
   "scripts": {
     "start": "ts-node index.ts",
-    "test": "jest",
-    "test:coverage": "jest --coverage --coverageReporters json-summary"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --coverageReporters json-summary"
   },
   "author": "",
   "license": "MIT",

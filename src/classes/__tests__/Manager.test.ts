@@ -202,8 +202,12 @@ describe('DiscordManager', () => {
   });
 
   describe('initializeDiscord', () => {
-    it('should create a new DiscordWrapper and call start', async () => {
+    it('should call start on the discord client', async () => {
       const discordManager = new Manager();
+      // @ts-expect-error - mocking discordClient
+      discordManager.discordClient = {
+        start: jest.fn()
+      };
 
       await discordManager['initializeDiscord']();
 
@@ -505,7 +509,7 @@ describe('DiscordManager', () => {
       discordManager['initializeDiscord'] = jest.fn();
       discordManager['registerDiscordListeners'] = jest.fn();
       discordManager['registerPushListeners'] = jest.fn();
-      await discordManager.start();
+      await discordManager['initializeClients']();
 
       expect(discordManager['initializeDiscord']).toHaveBeenCalled();
     });
@@ -513,7 +517,12 @@ describe('DiscordManager', () => {
     it('should call initializeRustPlus', async () => {
       const discordManager = new Manager();
       discordManager['initializeRustPlus'] = jest.fn();
-      await discordManager.start();
+      // @ts-expect-error - mocking discordClient
+      discordManager.discordClient = {
+        start: jest.fn()
+      };
+      discordManager.state.rustServerHost = 'localhost';
+      await discordManager['initializeClients']();
 
       expect(discordManager['initializeRustPlus']).toHaveBeenCalled();
     });
@@ -522,7 +531,11 @@ describe('DiscordManager', () => {
       const discordManager = new Manager();
       discordManager['initializePushListener'] = jest.fn();
       discordManager['registerPushListeners'] = jest.fn();
-      await discordManager.start();
+      // @ts-expect-error - mocking discordClient
+      discordManager.discordClient = {
+        start: jest.fn()
+      };
+      await discordManager['initializeClients']();
 
       expect(discordManager['initializePushListener']).toHaveBeenCalled();
     });
