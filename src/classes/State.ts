@@ -38,8 +38,8 @@ export default class State {
   public rustToken: string;
 
   /**
-   * @param Key is the entity id
-   * @param Value is the instantiated message
+   * @key the entity id
+   * @value the instantiated message
    */
   public messages: Map<string, BaseSmartMessage<BaseEntityInfo>> = new Map();
 

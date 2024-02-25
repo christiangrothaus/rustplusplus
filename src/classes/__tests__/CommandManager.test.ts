@@ -58,8 +58,10 @@ describe('CommandManager', () => {
 
       await commandManager.loadCommands();
 
-      expect(commandManager.commands).toHaveLength(1);
-      expect(commandManager.commands).toEqual(expectedCommandValue);
+      expect(commandManager['commandJson']).toHaveLength(1);
+      expect(commandManager['commandJson']).toEqual(expectedCommandValue);
+      expect(commandManager.commands.size).toBe(1);
+      expect(commandManager.commands.get('setrustinfo')).toBeDefined();
     });
 
     it('should throw an error if the commands fail to load', async () => {
@@ -115,7 +117,7 @@ describe('CommandManager', () => {
       const manager = new CommandManager('123');
       process.env.APPLICATION_ID = '321';
       process.env.DISCORD_TOKEN = '231';
-      manager.commands = [];
+      manager['commandJson'] = [];
 
       expect(manager['postCommands']()).rejects.toThrow('No commands loaded.');
     });
@@ -124,7 +126,7 @@ describe('CommandManager', () => {
       const manager = new CommandManager('123');
       process.env.APPLICATION_ID = '321';
       process.env.DISCORD_TOKEN = '231';
-      manager.commands = [{ name: 'test', description: 'test' }];
+      manager['commandJson'] = [{ name: 'test', description: 'test' }];
       mockPut.mockImplementationOnce(() => { throw new Error('401: Unauthorized'); });
       const expectedError = 'Failed to register application commands: 401: Unauthorized';
 
@@ -135,7 +137,7 @@ describe('CommandManager', () => {
       const manager = new CommandManager('123');
       process.env.APPLICATION_ID = '321';
       process.env.DISCORD_TOKEN = '231';
-      manager.commands = [{ name: 'test', description: 'test' }];
+      manager['commandJson'] = [{ name: 'test', description: 'test' }];
 
       await expect(manager['postCommands']()).resolves.not.toThrow();
     });
