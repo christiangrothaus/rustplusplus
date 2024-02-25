@@ -14,6 +14,18 @@ import RustPlusWrapper from './RustPlusWrapper';
 import { EntityChanged } from '../models/RustPlus.models';
 import DiscordWrapper, { RustChannels } from './DiscordWrapper';
 import { MessageData } from './messages/BaseSmartMessage';
+import promptSync from 'prompt-sync';
+import PushRegister from './PushRegister';
+import fs from 'fs';
+import path from 'path';
+
+type RequiredEnv = {
+  discordToken: string;
+  applicationId: string;
+  steamId: string;
+};
+
+const envFilePath = path.join(__dirname, '../../.env');
 
 export default class Manager {
   discordClient: DiscordWrapper;
@@ -27,6 +39,11 @@ export default class Manager {
   private rustPlusKeepAliveId: NodeJS.Timeout;
 
   async start(): Promise<void> {
+    this.setupEnv();
+
+    const pushRegister = new PushRegister();
+    await pushRegister.fcmRegister();
+
     this.discordClient = new DiscordWrapper(this.state);
     await this.loadState();
     await this.initializeClients();
@@ -52,6 +69,28 @@ export default class Manager {
     clearInterval(this.rustPlusKeepAliveId);
 
     process.exit(1);
+  }
+
+  private setupEnv(): void {
+    const { DISCORD_TOKEN, APPLICATION_ID, STEAM_ID } = process.env;
+    const prompt = promptSync();
+    const env: RequiredEnv = {
+      discordToken: DISCORD_TOKEN,
+      applicationId: APPLICATION_ID,
+      steamId: STEAM_ID
+    };
+
+    if (!env.discordToken) {
+      env.discordToken = prompt('Please enter your Discord Bot Token: ');
+    }
+    if (!env.applicationId) {
+      env.applicationId = prompt('Please enter your Discord Application ID: ');
+    }
+    if (!env.steamId) {
+      env.steamId = prompt('Please enter your Steam ID: ');
+    }
+
+    fs.writeFileSync(envFilePath, `DISCORD_TOKEN=${env.discordToken}\nAPPLICATION_ID=${env.applicationId}\nSTEAM_ID=${env.steamId}`);
   }
 
   private async loadState(): Promise<void> {
