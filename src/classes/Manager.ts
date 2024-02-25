@@ -27,9 +27,11 @@ export default class Manager {
   private rustPlusKeepAliveId: NodeJS.Timeout;
 
   async start(): Promise<void> {
+    this.discordClient = new DiscordWrapper(this.state);
     await this.loadState();
     await this.initializeClients();
 
+    this.registerRustPlusListeners();
     this.registerDiscordListeners();
     this.registerPushListeners();
 
@@ -43,9 +45,9 @@ export default class Manager {
   }
 
   destroy(): void {
-    this.state.save();
-    this.discordClient.destroy();
-    this.pushListener.destroy();
+    this.state?.save();
+    this.discordClient?.destroy();
+    this.pushListener?.destroy();
 
     clearInterval(this.rustPlusKeepAliveId);
 
@@ -57,7 +59,6 @@ export default class Manager {
   }
 
   private async initializeDiscord(): Promise<void> {
-    this.discordClient = new DiscordWrapper(this.state);
     await this.discordClient.start();
   }
 
@@ -65,7 +66,6 @@ export default class Manager {
     if (this.state.rustServerHost) {
       this.rustPlus = new RustPlusWrapper(this.state.rustServerHost, this.state.rustToken, this.state?.rustServerPort);
       this.rustPlus.connect();
-      this.registerRustPlusListeners();
     } else {
       console.log('No rust server host found in state. RustPlus will not be initialized.');
     }
