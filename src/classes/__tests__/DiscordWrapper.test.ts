@@ -134,7 +134,7 @@ describe('DiscordWrapper', () => {
       await discordWrapper.updateMessage('id', { name: 'newName' });
 
       expect(message.entityInfo.name).toBe('newName');
-      expect(discordWrapper.state.messages.get('id').entityInfo.name).toBe('newName');
+      expect(discordWrapper.state.messages.get('id')?.entityInfo.name).toBe('newName');
     });
   });
 
