@@ -5,7 +5,13 @@ import fs from 'fs';
 
 export default class CommandManager {
 
-  commands: Array<RESTPostAPIChatInputApplicationCommandsJSONBody> = [];
+  /**
+   * @key the command name
+   * @value the command
+   */
+  commands: Map<string, Command> = new Map();
+
+  private commandJson: Array<RESTPostAPIChatInputApplicationCommandsJSONBody> = [];
 
   private guildId: string;
 
@@ -23,7 +29,8 @@ export default class CommandManager {
         const filePath = path.join(commandsPath, file);
         const command: Command = await import(filePath);
         if (command.data && command.execute) {
-          this.commands.push(command.data.toJSON());
+          this.commandJson.push(command.data.toJSON());
+          this.commands.set(command.data.name, command);
         } else {
           throw new Error(`The command at ${filePath} is missing a required "data" or "execute" property.`);
         }
@@ -43,7 +50,7 @@ export default class CommandManager {
       throw new Error('Missing required discord token.');
     } else if (!this.guildId) {
       throw new Error('Missing required guild ID.');
-    } else if (!this.commands.length) {
+    } else if (!this.commandJson.length) {
       throw new Error('No commands loaded.');
     }
 
@@ -52,7 +59,7 @@ export default class CommandManager {
     try {
       await rest.put(
         Routes.applicationGuildCommands(APPLICATION_ID as string, this.guildId),
-        { body: this.commands }
+        { body: this.commandJson }
       ) as Array<any>;
     } catch (error) {
       throw new Error(`Failed to register application commands: ${error.message}`);

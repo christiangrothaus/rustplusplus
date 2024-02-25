@@ -3,18 +3,16 @@ import {
   ActionRowBuilder,
   ButtonInteraction,
   ChatInputCommandInteraction,
-  Collection,
   ModalBuilder,
   ModalSubmitInteraction,
   TextInputBuilder,
   TextInputStyle
 } from 'discord.js';
 import State from './State';
-import PushListener from './PushListener';
-import Command from './Command';
+import PushListener, { PushNotification } from './PushListener';
 import RustPlusWrapper from './RustPlusWrapper';
 import { EntityChanged } from '../models/RustPlus.models';
-import DiscordWrapper from './DiscordWrapper';
+import DiscordWrapper, { RustChannels } from './DiscordWrapper';
 import { MessageData } from './messages/BaseSmartMessage';
 
 export default class Manager {
@@ -23,8 +21,6 @@ export default class Manager {
   rustPlus: RustPlusWrapper;
 
   state = new State();
-
-  commands = new Collection<string, Command>();
 
   pushListener: PushListener;
 
@@ -70,6 +66,8 @@ export default class Manager {
       this.rustPlus = new RustPlusWrapper(this.state.rustServerHost, this.state.rustToken, this.state?.rustServerPort);
       this.rustPlus.connect();
       this.registerRustPlusListeners();
+    } else {
+      console.log('No rust server host found in state. RustPlus will not be initialized.');
     }
   }
 
@@ -78,96 +76,88 @@ export default class Manager {
     await this.pushListener.start();
   }
 
-  private registerDiscordListeners(): void {
-    this.discordClient.onButtonInteraction(async (interaction: ButtonInteraction) => {
-      const customId = interaction.customId;
-      const [entityId, action] = customId.split('-');
+  private async onButtonInteraction(interaction: ButtonInteraction) {
+    const customId = interaction.customId;
+    const [entityId, action] = customId.split('-');
 
-      switch (action) {
-        case 'edit': {
-          const modal = new ModalBuilder()
-            .setCustomId(entityId + '-editModal')
-            .setTitle('Change Switch Details');
+    switch (action) {
+      case 'edit': {
+        const modal = new ModalBuilder()
+          .setCustomId(entityId + '-editModal')
+          .setTitle('Change Message Details');
 
-          const nameInput = new TextInputBuilder()
-            .setCustomId('name')
-            .setLabel('Name')
-            .setValue(interaction.message.embeds[0].title)
-            .setStyle(TextInputStyle.Short);
+        const nameInput = new TextInputBuilder()
+          .setCustomId('name')
+          .setLabel('Name')
+          .setValue(interaction.message.embeds[0].title)
+          .setStyle(TextInputStyle.Short);
 
-          const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(nameInput);
+        const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(nameInput);
 
-          modal.setComponents(firstActionRow);
+        modal.setComponents(firstActionRow);
 
-          await interaction.showModal(modal);
+        await interaction.showModal(modal);
 
-          break;
-        }
-        case 'on':
-        case 'off': {
-          const embed = interaction.message.embeds[0];
-          const entityId = embed.footer?.text;
-          const entityName = embed.title;
+        break;
+      }
+      case 'on':
+      case 'off': {
+        const embed = interaction.message.embeds[0];
+        const entityId = embed.footer?.text;
 
-          await interaction.deferReply({ ephemeral: true, fetchReply: true });
+        await interaction.deferReply({ fetchReply: true });
 
-          try {
-            await this.rustPlus.toggleSmartSwitch(entityId, action === 'on');
-            this.rustPlus.getEntityInfo(entityId);
-          } catch (error) {
-            if (typeof error === 'string') {
-              interaction.editReply(error).then(() => {
-                setTimeout(() => interaction.deleteReply(), 5000);
-              });
-            } else {
-              interaction.editReply('An unkown error occured').then(() => {
-                setTimeout(() => interaction.deleteReply(), 5000);
-              });
-            }
-
-            break;
-          }
-
-          interaction.editReply(`${entityName} switched ${action}!`).then(() => {
+        try {
+          await this.rustPlus.toggleSmartSwitch(entityId, action === 'on');
+          this.rustPlus.getEntityInfo(entityId);
+        } catch (error) {
+          interaction.editReply(error as string).then(() => {
             setTimeout(() => interaction.deleteReply(), 5000);
           });
-
-          break;
         }
-        case 'delete': {
-          const entityId = interaction.message.embeds[0].footer.text;
-          this.discordClient.deleteMessage(entityId);
-
-          break;
-        }
+        break;
       }
-    });
+      case 'delete': {
+        const entityId = interaction.message.embeds[0].footer.text;
+        this.discordClient.deleteMessage(entityId);
 
-    this.discordClient.onModalSubmitInteraction(async (interaction: ModalSubmitInteraction) => {
-      const name = interaction.fields.getTextInputValue('name');
-
-      this.discordClient.updateMessage(interaction.message.embeds[0].footer.text, { name });
-    });
-
-    this.discordClient.onChatInputCommandInteraction(async (interaction: ChatInputCommandInteraction) => {
-      const command = this.commands.get(interaction.commandName);
-
-      if (!command) {
-        console.error(`No command matching ${interaction.commandName} was found.`);
-        return;
+        break;
       }
+    }
+  }
 
-      try {
-        await command.execute(interaction, this);
-      } catch (error) {
-        console.error(error);
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
-        } else {
-          await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-        }
+  private onModalSubmitInteraction(interaction: ModalSubmitInteraction) {
+    const entityId =interaction.message.embeds[0].footer.text;
+    const name = interaction.fields.getTextInputValue('name');
+
+    this.discordClient.updateMessage(entityId, { name });
+  }
+
+  private async onChatInputCommandInteraction(interaction: ChatInputCommandInteraction) {
+    const command = this.discordClient.commandManager.commands.get(interaction.commandName);
+
+    if (!command) {
+      throw new Error(`No command matching ${interaction.commandName} was found.`);
+    }
+
+    try {
+      await command.execute(interaction, this);
+    } catch (error) {
+      console.log(error);
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+      } else {
+        await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
       }
-    });
+    }
+  }
+
+  private registerDiscordListeners(): void {
+    this.discordClient.onButtonInteraction(this.onButtonInteraction);
+
+    this.discordClient.onModalSubmitInteraction(this.onModalSubmitInteraction);
+
+    this.discordClient.onChatInputCommandInteraction(this.onChatInputCommandInteraction);
   }
 
   private async initializeClients(): Promise<void> {
@@ -186,36 +176,44 @@ export default class Manager {
     }
   }
 
+  private onRustPlusConnected(): void {
+    this.updateAllMessages();
+  }
+
+  private async onRustPlusEntityChange(entityChange: EntityChanged): Promise<void> {
+    const entityId = entityChange.entityId;
+
+    const entityInfo = { isActive: entityChange.payload.value, capacity: entityChange.payload.capacity };
+
+    await this.discordClient.updateMessage(`${entityId}`, entityInfo);
+  }
+
   private registerRustPlusListeners(): void {
-    if (this.rustPlus.hasClient()) {
-      this.rustPlus.onConnected(() => {
-        this.updateAllMessages();
-      });
+    this.rustPlus.onConnected(this.onRustPlusConnected);
 
-      this.rustPlus.onEntityChange(async (entityChange: EntityChanged) => {
-        const entityId = entityChange.entityId;
+    this.rustPlus.onEntityChange(this.onRustPlusEntityChange);
+  }
 
-        const entityInfo = { isActive: entityChange.payload.value, capacity: entityChange.payload.capacity };
+  private createOnChannelsReady(pushNotif: PushNotification) {
+    return (channels: RustChannels): void => {
+      const messageData: MessageData = {
+        entityInfo: {
+          entityId: pushNotif.entityId,
+          entityType: pushNotif.entityType,
+          name: pushNotif.name
+        }
+      };
 
-        this.discordClient.updateMessage(`${entityId}`, entityInfo);
-      });
-    }
+      this.state.createMessageFromData(channels, messageData);
+    };
+  }
+
+  private onEntityPush(pushNotif: PushNotification): void {
+    this.discordClient.onChannelsReady(this.createOnChannelsReady(pushNotif));
   }
 
   private registerPushListeners(): void {
-    this.pushListener.onEntityPush(async (pushNotif) => {
-      this.discordClient.onChannelsReady((channels) => {
-        const messageData: MessageData = {
-          entityInfo: {
-            entityId: pushNotif.entityId,
-            entityType: pushNotif.entityType,
-            name: pushNotif.name
-          }
-        };
-
-        this.state.createMessageFromData(channels, messageData);
-      });
-    });
+    this.pushListener.onEntityPush(this.onEntityPush);
   }
 
   private startRustPlusKeepAlive(): void {
