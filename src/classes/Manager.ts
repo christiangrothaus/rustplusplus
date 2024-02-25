@@ -31,7 +31,7 @@ export default class Manager {
   private rustPlusKeepAliveId: NodeJS.Timeout;
 
   async start(): Promise<void> {
-    this.loadState();
+    await this.loadState();
     await this.initializeClients();
 
     this.registerDiscordListeners();
@@ -56,12 +56,12 @@ export default class Manager {
     process.exit(1);
   }
 
-  private loadState(): void {
-    this.state.loadFromSave(this.discordClient);
+  private async loadState(): Promise<void> {
+    await this.state.loadFromSave(this.discordClient);
   }
 
   private async initializeDiscord(): Promise<void> {
-    this.discordClient = new DiscordWrapper();
+    this.discordClient = new DiscordWrapper(this.state);
     await this.discordClient.start();
   }
 
@@ -177,7 +177,7 @@ export default class Manager {
   }
 
   private async updateAllMessages(): Promise<void> {
-    const allEntityIds = Object.keys(this.discordClient.messages);
+    const allEntityIds = this.state.messages.keys();
 
     for (const entityId of allEntityIds) {
       const entityInfo = await this.rustPlus.getEntityInfo(entityId);

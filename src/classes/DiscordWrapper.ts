@@ -7,6 +7,8 @@ import {
   Client,
   Events,
   GatewayIntentBits,
+  Guild,
+  Interaction,
   ModalSubmitInteraction,
   PermissionsBitField,
   TextChannel
@@ -18,8 +20,7 @@ import SmartAlarmMessage from './messages/SmartAlarmMessage';
 import SmartAlarmEntityInfo from './entityInfo/SmartAlarmEntityInfo';
 import StorageMonitorMessage from './messages/StorageMonitorMessage';
 import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
-import BaseSmartMessage from './messages/BaseSmartMessage';
-import BaseEntityInfo from './entityInfo/BaseEntityInfo';
+import State from './State';
 
 export type RustChannels = {
   switchChannel: TextChannel,
@@ -32,11 +33,11 @@ export default class DiscordWrapper {
 
   commandManager: CommandManager;
 
-  messages: Map<string, BaseSmartMessage<BaseEntityInfo>>;
+  state: State;
 
   set notificationChannel(channel: TextChannel) {
     this._notificationChannel = channel;
-    this.checkChannelsReady();
+    this.callChannelsReadyCallbacks();
   }
 
   get notificationChannel(): TextChannel {
@@ -45,7 +46,7 @@ export default class DiscordWrapper {
 
   set switchChannel(channel: TextChannel) {
     this._switchChannel = channel;
-    this.checkChannelsReady();
+    this.callChannelsReadyCallbacks();
   }
 
   get switchChannel(): TextChannel {
@@ -64,59 +65,60 @@ export default class DiscordWrapper {
 
   private _switchChannel: TextChannel;
 
-  constructor() {
+  constructor(state: State) {
     this.client = new Client({ intents: [ GatewayIntentBits.Guilds] });
+    this.state = state;
   }
 
-  async start() {
+  public async start() {
     this.registerListeners();
     await this.client.login(process.env.DISCORD_TOKEN);
   }
 
-  async destroy() {
+  public async destroy() {
     this.client.removeAllListeners();
     await this.client.destroy();
   }
 
-  onButtonInteraction(callback: (interaction: ButtonInteraction) => void) {
+  public onButtonInteraction(callback: (interaction: ButtonInteraction) => void) {
     this.buttonCallbacks.push(callback);
   }
 
-  onModalSubmitInteraction(callback: (interaction: ModalSubmitInteraction) => void) {
+  public onModalSubmitInteraction(callback: (interaction: ModalSubmitInteraction) => void) {
     this.modalSubmitCallbacks.push(callback);
   }
 
-  onChatInputCommandInteraction(callback: (interaction: ChatInputCommandInteraction) => void) {
+  public onChatInputCommandInteraction(callback: (interaction: ChatInputCommandInteraction) => void) {
     this.chatInputCommandCallbacks.push(callback);
   }
 
   public async sendSwitchMessage(entityInfo: SmartSwitchEntityInfo) {
     const switchMessage = new SmartSwitchMessage(this.switchChannel, entityInfo);
     await switchMessage.send();
-    this.messages.set(switchMessage.entityInfo.entityId, switchMessage);
+    this.state.messages.set(switchMessage.entityInfo.entityId, switchMessage);
   }
 
   public async sendAlarmMessage(entityInfo: SmartAlarmEntityInfo) {
-    const alarmMessage = new SmartAlarmMessage(this.switchChannel, entityInfo);
+    const alarmMessage = new SmartAlarmMessage(this.notificationChannel, entityInfo);
     await alarmMessage.send();
-    this.messages.set(alarmMessage.entityInfo.entityId, alarmMessage);
+    this.state.messages.set(alarmMessage.entityInfo.entityId, alarmMessage);
   }
 
   public async sendStorageMessage(entityInfo: StorageMonitorEntityInfo) {
-    const storageMessage = new StorageMonitorMessage(this.switchChannel, entityInfo);
+    const storageMessage = new StorageMonitorMessage(this.notificationChannel, entityInfo);
     await storageMessage.send();
-    this.messages.set(storageMessage.entityInfo.entityId, storageMessage);
+    this.state.messages.set(storageMessage.entityInfo.entityId, storageMessage);
   }
 
   public async updateMessage(entityId: string, entityInfo: Partial<SmartAlarmEntityInfo | SmartSwitchEntityInfo | StorageMonitorEntityInfo>) {
-    const switchMessage = this.messages.get(entityId);
+    const switchMessage = this.state.messages.get(entityId);
     switchMessage.update(entityInfo);
   }
 
   public async deleteMessage(entityId: string) {
-    const message = this.messages.get(entityId);
+    const message = this.state.messages.get(entityId);
     await message.message.delete();
-    this.messages.delete(entityId);
+    this.state.messages.delete(entityId);
   }
 
   public onChannelsReady(callback: (channel: RustChannels) => void) {
@@ -165,25 +167,29 @@ export default class DiscordWrapper {
     }
   }
 
-  private registerListeners() {
-    this.client.once(Events.GuildCreate, (guild) => {
-      this.createChannels(guild.id);
-      this.commandManager = new CommandManager(guild.id);
-      this.commandManager.loadCommands();
-    });
-
-    this.client.on(Events.InteractionCreate, async (interaction) => {
-      if (interaction.isButton()) {
-        this.buttonCallbacks.forEach((callback) => callback(interaction as ButtonInteraction));
-      } else if (interaction.isModalSubmit()) {
-        this.modalSubmitCallbacks.forEach((callback) => callback(interaction as ModalSubmitInteraction));
-      } else if (interaction.isChatInputCommand()) {
-        this.chatInputCommandCallbacks.forEach((callback) => callback(interaction as ChatInputCommandInteraction));
-      }
-    });
+  private onGuildJoin(guild: Guild) {
+    this.createChannels(guild.id);
+    this.commandManager = new CommandManager(guild.id);
+    this.commandManager.loadCommands();
   }
 
-  private checkChannelsReady() {
+  private onInteractionCreate(interaction: Interaction) {
+    if (interaction.isButton()) {
+      this.buttonCallbacks.forEach((callback) => callback(interaction as ButtonInteraction));
+    } else if (interaction.isModalSubmit()) {
+      this.modalSubmitCallbacks.forEach((callback) => callback(interaction as ModalSubmitInteraction));
+    } else if (interaction.isChatInputCommand()) {
+      this.chatInputCommandCallbacks.forEach((callback) => callback(interaction as ChatInputCommandInteraction));
+    }
+  }
+
+  private registerListeners() {
+    this.client.once(Events.GuildCreate, this.onGuildJoin);
+
+    this.client.on(Events.InteractionCreate, this.onInteractionCreate);
+  }
+
+  private callChannelsReadyCallbacks() {
     if (this.switchChannel && this.notificationChannel) {
       this.channelsReadyCallbacks.forEach((callback) => callback({ switchChannel: this.switchChannel, notificationChannel: this.notificationChannel }));
       this.channelsReadyCallbacks = [];
