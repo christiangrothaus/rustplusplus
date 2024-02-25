@@ -53,7 +53,7 @@ describe('CommandManager', () => {
     it('should add the command data in the dir to the list of commands', async () => {
       const commandManager = new CommandManager('123');
       jest.spyOn(commandManager as any, 'postCommands').mockResolvedValue(undefined);
-      const rustInfoData = (await import('../../commands/set-rust-info')).data.toJSON();
+      const rustInfoData = (await import('../../commands/set-rust-info.ts')).data.toJSON();
       const expectedCommandValue = [rustInfoData];
 
       await commandManager.loadCommands();
