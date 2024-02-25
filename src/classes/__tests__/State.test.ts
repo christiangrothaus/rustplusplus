@@ -96,7 +96,7 @@ describe('state', () => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         messages: Array.from(MESSAGES).map(([messageId, message]) => message)
       };
-      const discordClient = new DiscordWrapper();
+      const discordClient = new DiscordWrapper(genericState);
       jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(data));
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -114,7 +114,7 @@ describe('state', () => {
 
     it('should reject if it fails to load', async () => {
       jest.spyOn(fs, 'readFileSync').mockImplementation(() => { throw new Error('ENOENT'); });
-      const discordClient = new DiscordWrapper();
+      const discordClient = new DiscordWrapper(genericState);
 
       await expect(genericState.loadFromSave(discordClient)).rejects.toThrow('ENOENT');
     });
