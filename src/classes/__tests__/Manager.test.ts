@@ -43,6 +43,14 @@ jest.mock('../PushListener', () => {
   });
 });
 
+jest.mock('../PushRegister', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      fcmRegister: jest.fn()
+    };
+  });
+});
+
 jest.mock('../DiscordWrapper', () => {
   return jest.fn().mockImplementation(() => {
     return {
