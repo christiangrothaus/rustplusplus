@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import {
   ActionRowBuilder,
   ButtonInteraction,
@@ -9,7 +9,7 @@ import {
   TextInputStyle
 } from 'discord.js';
 import State from './State';
-import PushListener, { PushNotification } from './PushListener';
+import PushListener, { PushNotificationBody } from './PushListener';
 import RustPlusWrapper from './RustPlusWrapper';
 import { EntityChanged } from '../models/RustPlus.models';
 import DiscordWrapper, { RustChannels } from './DiscordWrapper';
@@ -39,20 +39,25 @@ export default class Manager {
   private rustPlusKeepAliveId: NodeJS.Timeout;
 
   async start(): Promise<void> {
+    dotenv.config();
     this.setupEnv();
 
-    const pushRegister = new PushRegister();
-    await pushRegister.fcmRegister();
-
     this.discordClient = new DiscordWrapper(this.state);
-    await this.loadState();
-    await this.initializeClients();
+    this.pushListener = new PushListener();
+    const pushRegister = new PushRegister();
 
-    this.registerRustPlusListeners();
+    await pushRegister.fcmRegister();
+    await this.state.loadFromSave(this.discordClient);
+    await this.initializeDiscord();
+    if (this.state.rustServerHost) {
+      this.initializeRustPlus();
+      this.registerRustPlusListeners();
+      this.startRustPlusKeepAlive();
+    }
+    await this.pushListener.start();
+
     this.registerDiscordListeners();
     this.registerPushListeners();
-
-    this.startRustPlusKeepAlive();
   }
 
   restart(): void {
@@ -91,10 +96,12 @@ export default class Manager {
     }
 
     fs.writeFileSync(envFilePath, `DISCORD_TOKEN=${env.discordToken}\nAPPLICATION_ID=${env.applicationId}\nSTEAM_ID=${env.steamId}`);
-  }
 
-  private async loadState(): Promise<void> {
-    await this.state.loadFromSave(this.discordClient);
+    const envConfig = dotenv.parse(fs.readFileSync(envFilePath));
+
+    for (const key in envConfig) {
+      process.env[key] = envConfig[key];
+    }
   }
 
   private async initializeDiscord(): Promise<void> {
@@ -106,13 +113,8 @@ export default class Manager {
       this.rustPlus = new RustPlusWrapper(this.state.rustServerHost, this.state.rustToken, this.state?.rustServerPort);
       this.rustPlus.connect();
     } else {
-      console.log('No rust server host found in state. RustPlus will not be initialized.');
+      throw new Error('No rust server host found in state.');
     }
-  }
-
-  private async initializePushListener(): Promise<void> {
-    this.pushListener = new PushListener();
-    await this.pushListener.start();
   }
 
   private async onButtonInteraction(interaction: ButtonInteraction) {
@@ -199,12 +201,6 @@ export default class Manager {
     this.discordClient.onChatInputCommandInteraction(this.onChatInputCommandInteraction);
   }
 
-  private async initializeClients(): Promise<void> {
-    await this.initializeDiscord();
-    this.initializeRustPlus();
-    await this.initializePushListener();
-  }
-
   private async updateAllMessages(): Promise<void> {
     const allEntityIds = this.state.messages.keys();
 
@@ -233,7 +229,7 @@ export default class Manager {
     this.rustPlus.onEntityChange(this.onRustPlusEntityChange);
   }
 
-  private createOnChannelsReady(pushNotif: PushNotification) {
+  private createOnChannelsReady(pushNotif: PushNotificationBody) {
     return (channels: RustChannels): void => {
       const messageData: MessageData = {
         entityInfo: {
@@ -247,7 +243,7 @@ export default class Manager {
     };
   }
 
-  private onEntityPush(pushNotif: PushNotification): void {
+  private onEntityPush(pushNotif: PushNotificationBody): void {
     this.discordClient.onChannelsReady(this.createOnChannelsReady(pushNotif));
   }
 

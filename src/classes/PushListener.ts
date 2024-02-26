@@ -3,7 +3,7 @@ import fs from 'fs';
 import { EntityType } from '../models/RustPlus.models';
 import path from 'path';
 
-export type PushNotification = {
+export type PushNotificationBody = {
   img: string,
   entityType: EntityType,
   ip: string,
@@ -20,9 +20,9 @@ export type PushNotification = {
   playerId: string
 };
 
-type EntityCallback = (pushNotification: PushNotification) => void;
+type EntityCallback = (pushNotification: PushNotificationBody) => void;
 
-type PushConfig = {
+export type PushConfig = {
   fcm_credentials: {
     keys: {
       privateKey: string,
@@ -65,7 +65,7 @@ export default class PushListener {
 
   public async start(): Promise<void> {
     this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
-      const body = JSON.parse(notification.data.body as string) as PushNotification;
+      const body = JSON.parse(notification.data.body as string) as PushNotificationBody;
       this.entityPushCallbacks.forEach((callback) => callback(body));
     });
   }

@@ -4,7 +4,7 @@ import CommandManager from '../CommandManager';
 import SmartSwitchMessage from '../messages/SmartSwitchMessage';
 import SmartSwitchEntityInfo from '../entityInfo/SmartSwitchEntityInfo';
 import { EntityChanged } from '../../models/RustPlus.models';
-import { PushNotification } from '../PushListener';
+import { PushNotificationBody } from '../PushListener';
 
 jest.mock('../State', () => {
   return jest.fn().mockImplementation(() => {
@@ -205,16 +205,6 @@ describe('DiscordManager', () => {
     });
   });
 
-  describe('loadState', () => {
-    it('should load the state from save', async () => {
-      const discordManager = new Manager();
-
-      await discordManager['loadState']();
-
-      expect(discordManager.state.loadFromSave).toHaveBeenCalled();
-    });
-  });
-
   describe('initializeDiscord', () => {
     it('should call start on the discord client', async () => {
       const discordManager = new Manager();
@@ -239,22 +229,11 @@ describe('DiscordManager', () => {
       expect(discordManager.rustPlus.connect).toHaveBeenCalled();
     });
 
-    it('should not create a new RustPlusWrapper or call connect if there is not a server host', () => {
+    it('should throw an error if there is no server host', () => {
       const discordManager = new Manager();
       discordManager['state'].rustServerHost = undefined;
 
-      discordManager['initializeRustPlus']();
-
-      expect(discordManager.rustPlus).toBeUndefined();
-    });
-  });
-
-  describe('initializePushListener', () => {
-    it('should create a new PushListener and call start', async () => {
-      const discordManager = new Manager();
-      await discordManager['initializePushListener']();
-
-      expect(discordManager.pushListener.start).toHaveBeenCalled();
+      expect(() => discordManager['initializeRustPlus']()).toThrow('No rust server host found in state.');
     });
   });
 
@@ -516,44 +495,6 @@ describe('DiscordManager', () => {
       expect(discordManager.discordClient.onChatInputCommandInteraction).toHaveBeenCalled();
     });
   });
-
-  describe('initilizeClients', () => {
-    it('should call initializeDiscord', async () => {
-      const discordManager = new Manager();
-      discordManager['initializeDiscord'] = jest.fn();
-      discordManager['registerDiscordListeners'] = jest.fn();
-      discordManager['registerPushListeners'] = jest.fn();
-      await discordManager['initializeClients']();
-
-      expect(discordManager['initializeDiscord']).toHaveBeenCalled();
-    });
-
-    it('should call initializeRustPlus', async () => {
-      const discordManager = new Manager();
-      discordManager['initializeRustPlus'] = jest.fn();
-      // @ts-expect-error - mocking discordClient
-      discordManager.discordClient = {
-        start: jest.fn()
-      };
-      discordManager.state.rustServerHost = 'localhost';
-      await discordManager['initializeClients']();
-
-      expect(discordManager['initializeRustPlus']).toHaveBeenCalled();
-    });
-
-    it('should call initializePushListener', async () => {
-      const discordManager = new Manager();
-      discordManager['initializePushListener'] = jest.fn();
-      discordManager['registerPushListeners'] = jest.fn();
-      // @ts-expect-error - mocking discordClient
-      discordManager.discordClient = {
-        start: jest.fn()
-      };
-      await discordManager['initializeClients']();
-
-      expect(discordManager['initializePushListener']).toHaveBeenCalled();
-    });
-  });
 });
 
 describe('updateAllMessages', () => {
@@ -628,7 +569,7 @@ describe('createOnChannelsReady', () => {
       name: 'entityName'
     };
 
-    const onChannelsReady = discordManager['createOnChannelsReady'](pushNotif as PushNotification);
+    const onChannelsReady = discordManager['createOnChannelsReady'](pushNotif as PushNotificationBody);
 
     const channels = {
       switchChannel: {} as TextChannel,
@@ -651,7 +592,7 @@ describe('onEntityPush', () => {
       name: 'entityName'
     };
 
-    discordManager['onEntityPush'](pushNotif as PushNotification);
+    discordManager['onEntityPush'](pushNotif as PushNotificationBody);
 
     expect(discordManager.discordClient.onChannelsReady).toHaveBeenCalled();
   });

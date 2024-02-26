@@ -59,15 +59,31 @@ describe('state', () => {
       genericState.rustToken = RUST_TOKEN;
       genericState.messages = MESSAGES;
 
-      let expected = '{';
-      expected += `"rustServerHost":"${RUST_SERVER_HOST}",`;
-      expected += `"rustServerPort":${RUST_SERVER_PORT},`;
-      expected += `"guildId":"${GUILD_ID}",`;
-      expected += `"rustToken":"${RUST_TOKEN}",`;
-      expected += '"messages":[';
-      expected += '{"messageId":"messageId1","entityInfo":{"name":"name","entityId":"entityId","entityType":"Switch"}},';
-      expected += '{"messageId":"messageId2","entityInfo":{"name":"name","entityId":"entityId","entityType":"StorageMonitor","capacity":100}}';
-      expected += ']}';
+      const expected = `{
+  "rustServerHost": "localhost",
+  "rustServerPort": 25565,
+  "guildId": "1234",
+  "rustToken": "myToken",
+  "messages": [
+    {
+      "messageId": "messageId1",
+      "entityInfo": {
+        "name": "name",
+        "entityId": "entityId",
+        "entityType": "Switch"
+      }
+    },
+    {
+      "messageId": "messageId2",
+      "entityInfo": {
+        "name": "name",
+        "entityId": "entityId",
+        "entityType": "StorageMonitor",
+        "capacity": 100
+      }
+    }
+  ]
+}`;
 
       genericState.save();
 

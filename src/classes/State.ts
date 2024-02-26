@@ -52,7 +52,7 @@ export default class State {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       messages: Array.from(this.messages).map(([messageId, message]) => message)
     };
-    const json = JSON.stringify(data);
+    const json = JSON.stringify(data, null, 2);
 
     try {
       fs.writeFileSync(SAVE_DATA_PATH, json, 'utf-8');
@@ -79,11 +79,13 @@ export default class State {
             const message = await this.createMessageFromData(channels, msgData);
             this.messages.set(message.message.id, message);
           }
-
-          resolve();
         });
+        resolve();
 
       } catch (e) {
+        if (e.code === 'ENOENT') {
+          resolve();
+        }
         reject(e);
       }
     });
