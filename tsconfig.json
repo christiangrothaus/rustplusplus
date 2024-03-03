@@ -5,7 +5,8 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
   },
   "include": ["./**/*.ts", "./.eslintrc.js"]
 }
