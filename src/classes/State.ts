@@ -9,6 +9,7 @@ import StorageMonitorMessage from './messages/StorageMonitorMessage';
 import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
 import SmartAlarmEntityInfo from './entityInfo/SmartAlarmEntityInfo';
 import SmartSwitchEntityInfo from './entityInfo/SmartSwitchEntityInfo';
+import { EntityType } from '../models/RustPlus.models';
 
 export const SAVE_DATA_PATH = path.join(__dirname + '../../../save.json');
 
@@ -17,6 +18,7 @@ export type DataToSaveModel = {
   rustServerPort: number,
   guildId: string,
   rustToken: string
+  pushIds: Array<string>,
   messages: Array<BaseSmartMessage<BaseEntityInfo>>
 };
 
@@ -25,6 +27,7 @@ export type SavedDataModel = {
   rustServerPort: number,
   guildId: string,
   rustToken: string,
+  pushIds: Array<string>,
   messages: Array<MessageData>
 };
 
@@ -36,6 +39,8 @@ export default class State {
   public guildId: string;
 
   public rustToken: string;
+
+  public pushIds: Array<string> = [];
 
   /**
    * @key the entity id
@@ -49,6 +54,7 @@ export default class State {
       rustServerPort: this.rustServerPort,
       guildId: this.guildId,
       rustToken: this.rustToken,
+      pushIds: this.pushIds,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       messages: Array.from(this.messages).map(([messageId, message]) => message)
     };
@@ -71,6 +77,7 @@ export default class State {
         this.rustServerPort = saveData.rustServerPort;
         this.guildId = saveData.guildId;
         this.rustToken = saveData.rustToken;
+        this.pushIds = saveData.pushIds || [];
 
         discordClient.onChannelsReady(async (channels) => {
           const { messages } = saveData;
@@ -80,8 +87,8 @@ export default class State {
             this.messages.set(message.message.id, message);
           }
         });
-        resolve();
 
+        resolve();
       } catch (e) {
         if (e.code === 'ENOENT') {
           resolve();
@@ -94,21 +101,25 @@ export default class State {
   public async createMessageFromData(channels: RustChannels, messageData: MessageData): Promise<BaseSmartMessage<BaseEntityInfo>> {
     const { messageId } = messageData;
 
+    if (this.messages.has(messageData.entityInfo.entityId)) {
+      return this.messages.get(messageData.entityInfo.entityId);
+    }
+
     let message: BaseSmartMessage<BaseEntityInfo>;
     switch (messageData.entityInfo.entityType) {
-      case 'Switch': {
+      case EntityType.Switch: {
         const castedEntityInfo = messageData.entityInfo as SmartSwitchEntityInfo;
         const entityInfo = new SmartSwitchEntityInfo(castedEntityInfo.name, castedEntityInfo.entityId, castedEntityInfo.isActive);
         message = new SmartSwitchMessage(channels.switchChannel , entityInfo);
         break;
       }
-      case 'Alarm': {
+      case EntityType.Alarm: {
         const castedEntityInfo = messageData.entityInfo as SmartAlarmEntityInfo;
         const entityInfo = new SmartAlarmEntityInfo(castedEntityInfo.name, castedEntityInfo.entityId);
         message = new SmartAlarmMessage(channels.notificationChannel, entityInfo);
         break;
       }
-      case 'StorageMonitor': {
+      case EntityType.StorageMonitor: {
         const castedEntityInfo = messageData.entityInfo as StorageMonitorEntityInfo;
         const entityInfo = new StorageMonitorEntityInfo(castedEntityInfo.name, castedEntityInfo.entityId, castedEntityInfo.capacity);
         message = new StorageMonitorMessage(channels.notificationChannel, entityInfo);
@@ -130,11 +141,21 @@ export default class State {
         const discordMessage = await message.channel.messages.fetch(messageId);
         message.message = discordMessage;
       } catch (e) {
-        message.send();
+        await message.send();
       }
     } else {
-      message.send();
+      const discordMessages = message.channel.messages.cache;
+      const existingMessage = discordMessages.find((msg) => {
+        return msg.embeds[0].footer.text === message.entityInfo.entityId;
+      });
+      if (existingMessage) {
+        message.message = existingMessage;
+      } else {
+        await message.send();
+      }
     }
+
+    this.messages.set(message.entityInfo.entityId, message);
 
     return message;
   }

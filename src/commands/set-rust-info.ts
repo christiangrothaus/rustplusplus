@@ -27,18 +27,17 @@ export const execute: CommandExecute = async (interaction, discordManager) => {
     return;
   }
 
-  if (typeof port === 'number') {
-    if (port < 1 || port > 65535 - RUST_PLUS_SERVER_PORT_OFFSET) {
-      interaction.reply({ content: 'Invalid port number', ephemeral: true });
-      return;
-    }
-    discordManager.state.rustServerPort = port + RUST_PLUS_SERVER_PORT_OFFSET;
+  if (port < 1 || port > 65535 - RUST_PLUS_SERVER_PORT_OFFSET) {
+    interaction.reply({ content: 'Invalid port number', ephemeral: true });
+    return;
   }
 
+  discordManager.state.rustServerPort = port ? port + RUST_PLUS_SERVER_PORT_OFFSET : undefined;
   discordManager.state.rustServerHost = host;
-  discordManager.restart();
 
-  interaction.reply({ content: 'Server info set successfully', ephemeral: true });
+  interaction.reply({ content: 'Server info set successfully', ephemeral: true }).then(() => {
+    setTimeout(() => interaction.deleteReply(), 5000);
+  });
 };
 
 export default new Command(data, execute);

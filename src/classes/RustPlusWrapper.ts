@@ -19,9 +19,9 @@ export default class RustPlusWrapper {
 
   private connectedCallbacks: Array<() => void> = [];
 
-  constructor(serverHost: string, rustToken: string, serverPort?: number) {
+  constructor(serverHost: string, rustToken: string, serverPort: number = RUST_PLUS_SERVER_PORT_DEFAULT) {
     this.serverHost = serverHost;
-    this.serverPort = serverPort || RUST_PLUS_SERVER_PORT_DEFAULT;
+    this.serverPort = serverPort;
     this.rustToken = rustToken;
   }
 
@@ -29,6 +29,21 @@ export default class RustPlusWrapper {
     this.client = new RustPlus(this.serverHost, this.serverPort, process.env.STEAM_ID, this.rustToken);
     this.client.connect();
     this.registerListeners();
+  }
+
+  public updateRustPlusCreds(serverHost: string, serverPort: number = RUST_PLUS_SERVER_PORT_DEFAULT, rustToken?: string): void {
+    this.serverHost = serverHost;
+    this.serverPort = serverPort;
+    if (rustToken) {
+      this.rustToken = rustToken;
+    }
+    this.disconnect();
+    this.connect();
+  }
+
+  public disconnect(): void {
+    this.client.removeAllListeners();
+    this.client.disconnect();
   }
 
   public async getEntityInfo(entityId: string): Promise<EntityInfo> {
@@ -87,9 +102,9 @@ export default class RustPlusWrapper {
   }
 
   private registerListeners(): void {
-    this.client.on('connected', this.callConnectedCallbacks);
+    this.client.on('connected', () => { this.callConnectedCallbacks(); });
 
-    this.client.on('message', this.callEntityChangeCallbacks);
+    this.client.on('message', (message) => { this.callEntityChangeCallbacks(message as Message); });
   }
 
   private callEntityChangeCallbacks(message: Message): void {

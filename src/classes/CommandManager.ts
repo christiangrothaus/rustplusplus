@@ -26,7 +26,7 @@ export default class CommandManager {
       const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts'));
       for (const file of commandFiles) {
         // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
-        const filePath = path.join(commandsPath, file);
+        const filePath = 'file:///' + path.join(commandsPath, file);
         const command: Command = await import(filePath);
         if (command.data && command.execute) {
           this.commandJson.push(command.data.toJSON());

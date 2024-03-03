@@ -2,6 +2,7 @@ import 'dotenv/config';
 import {
   ButtonInteraction,
   CategoryChannel,
+  CategoryCreateChannelOptions,
   ChannelType,
   ChatInputCommandInteraction,
   Client,
@@ -21,6 +22,16 @@ import SmartAlarmEntityInfo from './entityInfo/SmartAlarmEntityInfo';
 import StorageMonitorMessage from './messages/StorageMonitorMessage';
 import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
 import State from './State';
+
+const notificationChannelCreateOptions: CategoryCreateChannelOptions = {
+  name: 'Notifications',
+  type: ChannelType.GuildText
+};
+
+const switchChannelCreateOptions: CategoryCreateChannelOptions = {
+  name: 'Switches',
+  type: ChannelType.GuildText
+};
 
 export type RustChannels = {
   switchChannel: TextChannel,
@@ -66,7 +77,7 @@ export default class DiscordWrapper {
   private _switchChannel: TextChannel;
 
   constructor(state: State) {
-    this.client = new Client({ intents: [ GatewayIntentBits.Guilds] });
+    this.client = new Client({ intents: [ GatewayIntentBits.Guilds ] });
     this.state = state;
   }
 
@@ -116,8 +127,10 @@ export default class DiscordWrapper {
   }
 
   public async deleteMessage(entityId: string) {
-    const message = this.state.messages.get(entityId);
-    await message.message.delete();
+    const savedMessage = this.state.messages.get(entityId);
+    if (savedMessage?.message) {
+      await savedMessage.message.delete();
+    }
     this.state.messages.delete(entityId);
   }
 
@@ -138,12 +151,19 @@ export default class DiscordWrapper {
 
     if (existingCategory) {
       existingCategory.children.cache.forEach((channel) => {
-        if (channel.name === 'Notifications') {
+        if (channel.name.toLowerCase() === 'notifications') {
           this.notificationChannel = <TextChannel> channel;
-        } else if (channel.name === 'Switches') {
+        } else if (channel.name.toLowerCase() === 'switches') {
           this.switchChannel = <TextChannel> channel;
         }
       });
+
+      if (!this.notificationChannel) {
+        this.notificationChannel = await existingCategory.children.create(notificationChannelCreateOptions);
+      }
+      if (!this.switchChannel) {
+        this.switchChannel = await existingCategory.children.create(switchChannelCreateOptions);
+      }
     } else {
       const channelCategory = await guild.channels.create({
         name: 'Rust++',
@@ -152,19 +172,25 @@ export default class DiscordWrapper {
           id: guild.roles.everyone,
           deny: new PermissionsBitField(['SendMessages']),
           allow: new PermissionsBitField(['ViewChannel', 'ReadMessageHistory'])
+        }, {
+          id: this.client.user.id,
+          allow: new PermissionsBitField(['SendMessages', 'ManageMessages'])
         }]
       });
 
-      this.notificationChannel = await channelCategory.children.create({
-        name: 'Notifications',
-        type: ChannelType.GuildText
-      });
+      this.notificationChannel = await channelCategory.children.create(notificationChannelCreateOptions);
 
-      this.switchChannel = await channelCategory.children.create({
-        name: 'Switches',
-        type: ChannelType.GuildText
-      });
+      this.switchChannel = await channelCategory.children.create(switchChannelCreateOptions);
     }
+  }
+
+  private async onClientReady(client: Client) {
+    const guilds = await client.guilds.fetch();
+    guilds.forEach((guild) => {
+      this.createChannels(guild.id);
+      this.commandManager = new CommandManager(guild.id);
+      this.commandManager.loadCommands();
+    });
   }
 
   private onGuildJoin(guild: Guild) {
@@ -184,9 +210,11 @@ export default class DiscordWrapper {
   }
 
   private registerListeners() {
-    this.client.once(Events.GuildCreate, this.onGuildJoin);
+    this.client.once(Events.ClientReady, (client) => { this.onClientReady(client); });
 
-    this.client.on(Events.InteractionCreate, this.onInteractionCreate);
+    this.client.once(Events.GuildCreate, (guild) => { this.onGuildJoin(guild); });
+
+    this.client.on(Events.InteractionCreate, (interaction) => { this.onInteractionCreate(interaction); });
   }
 
   private callChannelsReadyCallbacks() {

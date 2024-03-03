@@ -11,7 +11,7 @@ import {
 import State from './State';
 import PushListener, { PushNotificationBody } from './PushListener';
 import RustPlusWrapper from './RustPlusWrapper';
-import { EntityChanged } from '../models/RustPlus.models';
+import { EntityChanged, EntityType } from '../models/RustPlus.models';
 import DiscordWrapper, { RustChannels } from './DiscordWrapper';
 import { MessageData } from './messages/BaseSmartMessage';
 import promptSync from 'prompt-sync';
@@ -43,18 +43,19 @@ export default class Manager {
     this.setupEnv();
 
     this.discordClient = new DiscordWrapper(this.state);
-    this.pushListener = new PushListener();
+
     const pushRegister = new PushRegister();
 
     await pushRegister.fcmRegister();
     await this.state.loadFromSave(this.discordClient);
+    this.pushListener = new PushListener();
     await this.initializeDiscord();
     if (this.state.rustServerHost) {
       this.initializeRustPlus();
       this.registerRustPlusListeners();
       this.startRustPlusKeepAlive();
     }
-    await this.pushListener.start();
+    await this.pushListener.start(this);
 
     this.registerDiscordListeners();
     this.registerPushListeners();
@@ -74,6 +75,10 @@ export default class Manager {
     clearInterval(this.rustPlusKeepAliveId);
 
     process.exit(1);
+  }
+
+  restartRustPlus(): void {
+    this.rustPlus.updateRustPlusCreds(this.state.rustServerHost, this.state.rustServerPort);
   }
 
   private setupEnv(): void {
@@ -146,16 +151,12 @@ export default class Manager {
         const embed = interaction.message.embeds[0];
         const entityId = embed.footer?.text;
 
-        await interaction.deferReply({ fetchReply: true });
+        interaction.deferUpdate();
 
         try {
           await this.rustPlus.toggleSmartSwitch(entityId, action === 'on');
           this.rustPlus.getEntityInfo(entityId);
-        } catch (error) {
-          interaction.editReply(error as string).then(() => {
-            setTimeout(() => interaction.deleteReply(), 5000);
-          });
-        }
+        } catch (error) {} //eslint-disable-line
         break;
       }
       case 'delete': {
@@ -194,11 +195,11 @@ export default class Manager {
   }
 
   private registerDiscordListeners(): void {
-    this.discordClient.onButtonInteraction(this.onButtonInteraction);
+    this.discordClient.onButtonInteraction((interaction) => { this.onButtonInteraction(interaction); });
 
-    this.discordClient.onModalSubmitInteraction(this.onModalSubmitInteraction);
+    this.discordClient.onModalSubmitInteraction((interaction) => { this.onModalSubmitInteraction((interaction)); });
 
-    this.discordClient.onChatInputCommandInteraction(this.onChatInputCommandInteraction);
+    this.discordClient.onChatInputCommandInteraction((interaction) => { this.onChatInputCommandInteraction((interaction)); });
   }
 
   private async updateAllMessages(): Promise<void> {
@@ -206,8 +207,10 @@ export default class Manager {
 
     for (const entityId of allEntityIds) {
       const entityInfo = await this.rustPlus.getEntityInfo(entityId);
-      const formattedEntityInfo = { isActive: entityInfo.payload.value, capacity: entityInfo.payload.capacity };
-      this.discordClient.updateMessage(entityId, formattedEntityInfo);
+      if (entityInfo?.payload) {
+        const formattedEntityInfo = { isActive: entityInfo.payload.value, capacity: entityInfo.payload.capacity };
+        this.discordClient.updateMessage(entityId, formattedEntityInfo);
+      }
     }
   }
 
@@ -224,31 +227,29 @@ export default class Manager {
   }
 
   private registerRustPlusListeners(): void {
-    this.rustPlus.onConnected(this.onRustPlusConnected);
+    this.rustPlus.onConnected(() => { this.onRustPlusConnected(); });
 
-    this.rustPlus.onEntityChange(this.onRustPlusEntityChange);
+    this.rustPlus.onEntityChange((entityChange) => { this.onRustPlusEntityChange(entityChange as EntityChanged); });
   }
 
-  private createOnChannelsReady(pushNotif: PushNotificationBody) {
-    return (channels: RustChannels): void => {
-      const messageData: MessageData = {
-        entityInfo: {
-          entityId: pushNotif.entityId,
-          entityType: pushNotif.entityType,
-          name: pushNotif.name
-        }
-      };
-
-      this.state.createMessageFromData(channels, messageData);
+  private async createOnChannelsReady(pushNotif: PushNotificationBody, channels: RustChannels) {
+    const messageData: MessageData = {
+      entityInfo: {
+        entityId: pushNotif.entityId,
+        entityType: EntityType[pushNotif.entityName],
+        name: pushNotif.entityName
+      }
     };
+
+    await this.state.createMessageFromData(channels, messageData);
   }
 
   private onEntityPush(pushNotif: PushNotificationBody): void {
-    this.discordClient.onChannelsReady(this.createOnChannelsReady(pushNotif));
+    this.discordClient.onChannelsReady((channels) => { this.createOnChannelsReady(pushNotif, channels); });
   }
 
   private registerPushListeners(): void {
-    this.pushListener.onEntityPush(this.onEntityPush);
+    this.pushListener.onEntityPush((pushNotif) => { this.onEntityPush(pushNotif); });
   }
 
   private startRustPlusKeepAlive(): void {

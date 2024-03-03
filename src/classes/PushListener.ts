@@ -2,6 +2,26 @@ import push from 'push-receiver';
 import fs from 'fs';
 import { EntityType } from '../models/RustPlus.models';
 import path from 'path';
+import { Awaitable } from 'discord.js';
+import Manager from './Manager';
+
+type Push = {
+  notification: {
+    data: {
+      body: string,
+      channelId: string,
+      experienceId: string,
+      message: string,
+      projectId: string,
+      scopeKey: string,
+      title: string
+    },
+    fcmMessageId: string,
+    from: string,
+    priority: string
+  },
+  persistentId: string
+};
 
 export type PushNotificationBody = {
   img: string,
@@ -20,7 +40,7 @@ export type PushNotificationBody = {
   playerId: string
 };
 
-type EntityCallback = (pushNotification: PushNotificationBody) => void;
+type EntityCallback = (pushNotification: PushNotificationBody) => Awaitable<void>;
 
 export type PushConfig = {
   fcm_credentials: {
@@ -63,10 +83,17 @@ export default class PushListener {
     this.entityPushCallbacks.push(callback);
   }
 
-  public async start(): Promise<void> {
-    this.listener = await push.listen(this.config.fcm_credentials, ({ notification }) => {
-      const body = JSON.parse(notification.data.body as string) as PushNotificationBody;
-      this.entityPushCallbacks.forEach((callback) => callback(body));
+  public async start(manager: Manager): Promise<void> {
+    const { state } = manager;
+    this.listener = await push.listen({ ...this.config.fcm_credentials, persistentIds: state.pushIds }, (push: Push) => {
+      const { notification, persistentId } = push;
+      const body = JSON.parse(notification.data.body) as PushNotificationBody;
+      if (state.rustToken !== body.playerToken) {
+        state.rustToken = body.playerToken;
+        manager.rustPlus.updateRustPlusCreds(state.rustServerHost, state.rustServerPort, body.playerToken);
+      }
+      state.pushIds.push(persistentId);
+      this.entityPushCallbacks.forEach(async (callback) => await callback(body));
     });
   }
 
