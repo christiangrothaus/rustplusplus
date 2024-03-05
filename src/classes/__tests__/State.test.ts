@@ -7,10 +7,17 @@ import SwitchEntityInfo from '../entityInfo/SwitchEntityInfo';
 import AlarmEntityInfo from '../entityInfo/AlarmEntityInfo';
 import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
 
+jest.mock('fs', () => {
+  return {
+    ...jest.requireActual('fs'),
+    readFileSync: jest.fn().mockImplementation(() => '{}'),
+    writeFileSync: jest.fn().mockImplementation(() => {})
+  };
+});
+
 describe('state', () => {
   beforeAll(() => {
     jest.spyOn(Date, 'now').mockReturnValue(1);
-    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
   });
 
   afterEach(() => {
