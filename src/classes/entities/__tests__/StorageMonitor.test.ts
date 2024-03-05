@@ -1,10 +1,8 @@
-import { ActionRowBuilder, EmbedBuilder, TextChannel } from 'discord.js';
-import StorageMonitorMessage from '../StorageMonitorMessage';
+import { ActionRowBuilder, EmbedBuilder } from 'discord.js';
+import StorageMonitor from '../StorageMonitor';
 import StorageMonitorEntityInfo from '../../entityInfo/StorageMonitorEntityInfo';
 
-describe('StorageMonitorMessage', () => {
-  const mockChannel = {} as TextChannel;
-
+describe('StorageMonitor', () => {
   describe('ctor', () => {
     it('should create a new instance of SmartAlarmMessage', () => {
       const entityInfo = {
@@ -13,7 +11,7 @@ describe('StorageMonitorMessage', () => {
         capacity: 100,
         entityType: 'StorageMonitor'
       } as StorageMonitorEntityInfo;
-      const storageMonitorMessage = new StorageMonitorMessage(mockChannel, entityInfo);
+      const storageMonitorMessage = new StorageMonitor(entityInfo);
 
       expect(storageMonitorMessage.entityInfo).toEqual(entityInfo);
       expect(storageMonitorMessage.embeds).toHaveLength(1);
@@ -29,7 +27,7 @@ describe('StorageMonitorMessage', () => {
         capacity: 100,
         entityType: 'StorageMonitor'
       } as StorageMonitorEntityInfo;
-      const storageMonitorMessage = new StorageMonitorMessage(mockChannel, entityInfo);
+      const storageMonitorMessage = new StorageMonitor(entityInfo);
       const embedBuilder = storageMonitorMessage.createMessageEmbed(entityInfo);
 
       expect(embedBuilder).toBeInstanceOf(EmbedBuilder);
@@ -42,7 +40,7 @@ describe('StorageMonitorMessage', () => {
         capacity: 100,
         entityType: 'StorageMonitor'
       } as StorageMonitorEntityInfo;
-      const storageMonitorMessage = new StorageMonitorMessage(mockChannel, entityInfo);
+      const storageMonitorMessage = new StorageMonitor(entityInfo);
       const embedBuilder = storageMonitorMessage.createMessageEmbed(entityInfo);
 
       expect(embedBuilder.data.fields[0].value).toBe('100');
@@ -57,7 +55,7 @@ describe('StorageMonitorMessage', () => {
         capacity: 100,
         entityType: 'StorageMonitor'
       } as StorageMonitorEntityInfo;
-      const storageMonitorMessage = new StorageMonitorMessage(mockChannel, entityInfo);
+      const storageMonitorMessage = new StorageMonitor(entityInfo);
       const actionRowBuilder = storageMonitorMessage.createMessageButtons(entityInfo);
 
       expect(actionRowBuilder).toBeInstanceOf(ActionRowBuilder);

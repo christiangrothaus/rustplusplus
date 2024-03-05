@@ -1,11 +1,17 @@
 import 'dotenv/config';
 import RustPlus from '@liamcottle/rustplus.js';
-import { EntityChanged, EntityInfo, Message } from '../models/RustPlus.models';
+import { EntityInfo, Message } from '../models/RustPlus.models';
+import { EventEmitter } from 'events';
 
 export const RUST_PLUS_SERVER_PORT_DEFAULT = 28082;
 export const RUST_PLUS_SERVER_PORT_OFFSET = 67;
 
-export default class RustPlusWrapper {
+export enum RustPlusEvents {
+  EntityChange = 'EntityChange',
+  Connected = 'Connected'
+}
+
+export default class RustPlusWrapper extends EventEmitter {
 
   serverHost: string;
 
@@ -15,11 +21,10 @@ export default class RustPlusWrapper {
 
   private client: RustPlus;
 
-  private entityChangeCallbacks: Array<(message: EntityChanged) => void> = [];
-
-  private connectedCallbacks: Array<() => void> = [];
+  private keepAliveId: NodeJS.Timeout;
 
   constructor(serverHost: string, rustToken: string, serverPort: number = RUST_PLUS_SERVER_PORT_DEFAULT) {
+    super();
     this.serverHost = serverHost;
     this.serverPort = serverPort;
     this.rustToken = rustToken;
@@ -29,6 +34,7 @@ export default class RustPlusWrapper {
     this.client = new RustPlus(this.serverHost, this.serverPort, process.env.STEAM_ID, this.rustToken);
     this.client.connect();
     this.registerListeners();
+    this.startKeepAlive();
   }
 
   public updateRustPlusCreds(serverHost: string, serverPort: number = RUST_PLUS_SERVER_PORT_DEFAULT, rustToken?: string): void {
@@ -37,13 +43,17 @@ export default class RustPlusWrapper {
     if (rustToken) {
       this.rustToken = rustToken;
     }
-    this.disconnect();
+    this.disconnect(false);
     this.connect();
   }
 
-  public disconnect(): void {
-    this.client.removeAllListeners();
-    this.client.disconnect();
+  public disconnect(removeListeners = true): void {
+    this.client?.removeAllListeners();
+    this.client?.disconnect();
+    if (removeListeners) {
+      this.removeAllListeners();
+    }
+    this.stopKeepAlive();
   }
 
   public async getEntityInfo(entityId: string): Promise<EntityInfo> {
@@ -89,33 +99,18 @@ export default class RustPlusWrapper {
     });
   }
 
-  public onEntityChange(callback: (message: any) => void): void {
-    this.entityChangeCallbacks.push(callback);
-  }
-
-  public onConnected(callback: () => void): void {
-    this.connectedCallbacks.push(callback);
-  }
-
   public hasClient(): boolean {
     return !!this.client;
   }
 
   private registerListeners(): void {
-    this.client.on('connected', () => { this.callConnectedCallbacks(); });
+    this.client.on('connected', () => {
+      this.emit(RustPlusEvents.Connected);
+    });
 
-    this.client.on('message', (message) => { this.callEntityChangeCallbacks(message as Message); });
-  }
-
-  private callEntityChangeCallbacks(message: Message): void {
-    const entityChange = message?.broadcast?.entityChanged;
-    if (entityChange) {
-      this.entityChangeCallbacks.forEach((callback) => callback(message?.broadcast?.entityChanged));
-    }
-  }
-
-  private callConnectedCallbacks(): void {
-    this.connectedCallbacks.forEach((callback) => callback());
+    this.client.on('message', (message: Message) => {
+      this.emit(RustPlusEvents.EntityChange, message);
+    });
   }
 
   private getErrorMessage(message: Message): string | undefined {
@@ -128,5 +123,18 @@ export default class RustPlusWrapper {
     }
 
     return error;
+  }
+
+  private startKeepAlive(): void {
+    this.keepAliveId = setInterval(() => {
+      if (this.client) {
+        this.client.getTime(() => {});
+      }
+    }, 5 * 60 * 1000);
+  }
+
+  private stopKeepAlive(): void {
+    clearInterval(this.keepAliveId);
+    this.keepAliveId = undefined;
   }
 }

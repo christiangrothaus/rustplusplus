@@ -9,15 +9,20 @@ import {
   TextInputStyle
 } from 'discord.js';
 import State from './State';
-import PushListener, { PushNotificationBody } from './PushListener';
-import RustPlusWrapper from './RustPlusWrapper';
-import { EntityChanged, EntityType } from '../models/RustPlus.models';
-import DiscordWrapper, { RustChannels } from './DiscordWrapper';
-import { MessageData } from './messages/BaseSmartMessage';
+import PushListener, { PushEvents, PushNotificationBody } from './PushListener';
+import RustPlusWrapper, { RustPlusEvents } from './RustPlusWrapper';
+import { EntityChanged } from '../models/RustPlus.models';
+import DiscordWrapper, { InteractionCreateEvents } from './DiscordWrapper';
 import promptSync from 'prompt-sync';
 import PushRegister from './PushRegister';
 import fs from 'fs';
 import path from 'path';
+import Switch from './entities/Switch';
+import Alarm from './entities/Alarm';
+import StorageMonitor from './entities/StorageMonitor';
+import SwitchEntityInfo from './entityInfo/SwitchEntityInfo';
+import AlarmEntityInfo from './entityInfo/AlarmEntityInfo';
+import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
 
 type RequiredEnv = {
   discordToken: string;
@@ -25,14 +30,14 @@ type RequiredEnv = {
   steamId: string;
 };
 
-const envFilePath = path.join(__dirname, '../../.env');
+export const ENV_FILE_PATH = path.join(__dirname, '../../.env');
 
 export default class Manager {
   discordClient: DiscordWrapper;
 
   rustPlus: RustPlusWrapper;
 
-  state = new State();
+  state = State.getInstance();
 
   pushListener: PushListener;
 
@@ -42,18 +47,16 @@ export default class Manager {
     dotenv.config();
     this.setupEnv();
 
-    this.discordClient = new DiscordWrapper(this.state);
+    this.discordClient = new DiscordWrapper();
 
     const pushRegister = new PushRegister();
 
     await pushRegister.fcmRegister();
-    await this.state.loadFromSave(this.discordClient);
     this.pushListener = new PushListener();
     await this.initializeDiscord();
     if (this.state.rustServerHost) {
       this.initializeRustPlus();
       this.registerRustPlusListeners();
-      this.startRustPlusKeepAlive();
     }
     await this.pushListener.start(this);
 
@@ -61,23 +64,30 @@ export default class Manager {
     this.registerPushListeners();
   }
 
-  restart(): void {
+  public restart(): void {
     this.state.save();
     this.destroy();
     this.start();
   }
 
-  destroy(): void {
-    this.state?.save();
-    this.discordClient?.destroy();
-    this.pushListener?.destroy();
-
-    clearInterval(this.rustPlusKeepAliveId);
+  public destroy(): void {
+    if (this.state?.save) {
+      this.state.save();
+    }
+    if (this.discordClient?.destroy) {
+      this.discordClient.destroy();
+    }
+    if (this.pushListener?.destroy) {
+      this.pushListener.destroy();
+    }
+    if (this.rustPlus?.disconnect) {
+      this.rustPlus.disconnect();
+    }
 
     process.exit(1);
   }
 
-  restartRustPlus(): void {
+  public restartRustPlus(): void {
     this.rustPlus.updateRustPlusCreds(this.state.rustServerHost, this.state.rustServerPort);
   }
 
@@ -100,9 +110,9 @@ export default class Manager {
       env.steamId = prompt('Please enter your Steam ID: ');
     }
 
-    fs.writeFileSync(envFilePath, `DISCORD_TOKEN=${env.discordToken}\nAPPLICATION_ID=${env.applicationId}\nSTEAM_ID=${env.steamId}`);
+    fs.writeFileSync(ENV_FILE_PATH, `DISCORD_TOKEN=${env.discordToken}\nAPPLICATION_ID=${env.applicationId}\nSTEAM_ID=${env.steamId}`);
 
-    const envConfig = dotenv.parse(fs.readFileSync(envFilePath));
+    const envConfig = dotenv.parse(fs.readFileSync(ENV_FILE_PATH));
 
     for (const key in envConfig) {
       process.env[key] = envConfig[key];
@@ -161,7 +171,14 @@ export default class Manager {
       }
       case 'delete': {
         const entityId = interaction.message.embeds[0].footer.text;
-        this.discordClient.deleteMessage(entityId);
+        if (this.state.pairedSwitches.has(entityId)) {
+          this.state.pairedSwitches.delete(entityId);
+        } else if (this.state.pairedAlarms.has(entityId)) {
+          this.state.pairedAlarms.delete(entityId);
+        } else if (this.state.pairedStorageMonitors.has(entityId)) {
+          this.state.pairedStorageMonitors.delete(entityId);
+        }
+        interaction.message.delete();
 
         break;
       }
@@ -172,7 +189,10 @@ export default class Manager {
     const entityId =interaction.message.embeds[0].footer.text;
     const name = interaction.fields.getTextInputValue('name');
 
-    this.discordClient.updateMessage(entityId, { name });
+    const pairedDevice = this.state.getPairedDevice(entityId);
+    pairedDevice.entityInfo.name = name;
+
+    interaction.message.edit(pairedDevice);
   }
 
   private async onChatInputCommandInteraction(interaction: ChatInputCommandInteraction) {
@@ -195,66 +215,58 @@ export default class Manager {
   }
 
   private registerDiscordListeners(): void {
-    this.discordClient.onButtonInteraction((interaction) => { this.onButtonInteraction(interaction); });
+    this.discordClient.on(InteractionCreateEvents.Button, (interaction) => { this.onButtonInteraction(interaction); });
 
-    this.discordClient.onModalSubmitInteraction((interaction) => { this.onModalSubmitInteraction((interaction)); });
+    this.discordClient.on(InteractionCreateEvents.ModalSubmit, (interaction) => { this.onModalSubmitInteraction((interaction)); });
 
-    this.discordClient.onChatInputCommandInteraction((interaction) => { this.onChatInputCommandInteraction((interaction)); });
-  }
-
-  private async updateAllMessages(): Promise<void> {
-    const allEntityIds = this.state.messages.keys();
-
-    for (const entityId of allEntityIds) {
-      const entityInfo = await this.rustPlus.getEntityInfo(entityId);
-      if (entityInfo?.payload) {
-        const formattedEntityInfo = { isActive: entityInfo.payload.value, capacity: entityInfo.payload.capacity };
-        this.discordClient.updateMessage(entityId, formattedEntityInfo);
-      }
-    }
-  }
-
-  private onRustPlusConnected(): void {
-    this.updateAllMessages();
+    this.discordClient.on(InteractionCreateEvents.ChatInputCommand, (interaction) => { this.onChatInputCommandInteraction((interaction)); });
   }
 
   private async onRustPlusEntityChange(entityChange: EntityChanged): Promise<void> {
-    const entityId = entityChange.entityId;
+    const entityId = `${entityChange.entityId}`;
 
     const entityInfo = { isActive: entityChange.payload.value, capacity: entityChange.payload.capacity };
 
-    await this.discordClient.updateMessage(`${entityId}`, entityInfo);
+    const pairedDevice = this.state.getPairedDevice(entityId);
+    pairedDevice.entityInfo = { ...pairedDevice.entityInfo, ...entityInfo };
+
+    const discordMessage = await this.discordClient.getPairedDeviceMessage(entityId);
+    discordMessage.edit(pairedDevice);
   }
 
   private registerRustPlusListeners(): void {
-    this.rustPlus.onConnected(() => { this.onRustPlusConnected(); });
-
-    this.rustPlus.onEntityChange((entityChange) => { this.onRustPlusEntityChange(entityChange as EntityChanged); });
+    this.rustPlus.on(RustPlusEvents.EntityChange, (entityChange) => { this.onRustPlusEntityChange(entityChange as EntityChanged); });
   }
 
-  private async createOnChannelsReady(pushNotif: PushNotificationBody, channels: RustChannels) {
-    const messageData: MessageData = {
-      entityInfo: {
-        entityId: pushNotif.entityId,
-        entityType: EntityType[pushNotif.entityName],
-        name: pushNotif.entityName
-      }
-    };
-
-    await this.state.createMessageFromData(channels, messageData);
+  private async onNewSwitchPush(pushNotif: PushNotificationBody): Promise<void> {
+    const entityInfo = await this.rustPlus.getEntityInfo(pushNotif.entityId);
+    const switchEntityInfo = new SwitchEntityInfo(pushNotif.entityName, pushNotif.entityId, entityInfo.payload.value);
+    const switchEntity = new Switch(switchEntityInfo);
+    this.discordClient.sendPairedDeviceMessage(switchEntity);
   }
 
-  private onEntityPush(pushNotif: PushNotificationBody): void {
-    this.discordClient.onChannelsReady((channels) => { this.createOnChannelsReady(pushNotif, channels); });
+  private async onNewAlarmPush(pushNotif: PushNotificationBody): Promise<void> {
+    const alarmEntityInfo = new AlarmEntityInfo(pushNotif.entityName, pushNotif.entityId);
+    const alarmEntity = new Alarm(alarmEntityInfo);
+    this.discordClient.sendPairedDeviceMessage(alarmEntity);
+  }
+
+  private async onNewStorageMonitorPush(pushNotif: PushNotificationBody): Promise<void> {
+    const entityInfo = await this.rustPlus.getEntityInfo(pushNotif.entityId);
+    const storageMonitorEntityInfo = new StorageMonitorEntityInfo(pushNotif.entityName, pushNotif.entityId, entityInfo.payload.capacity);
+    const storageMonitorEntity = new StorageMonitor(storageMonitorEntityInfo);
+    this.discordClient.sendPairedDeviceMessage(storageMonitorEntity);
   }
 
   private registerPushListeners(): void {
-    this.pushListener.onEntityPush((pushNotif) => { this.onEntityPush(pushNotif); });
-  }
-
-  private startRustPlusKeepAlive(): void {
-    this.rustPlusKeepAliveId = setInterval(() => {
-      this.updateAllMessages();
-    }, 5 * 60 * 1000);
+    this.pushListener.on(PushEvents.NewSwitch, async (pushNotif) => {
+      await this.onNewSwitchPush(pushNotif);
+    });
+    this.pushListener.on(PushEvents.NewAlarm, async (pushNotif) => {
+      await this.onNewAlarmPush(pushNotif);
+    });
+    this.pushListener.on(PushEvents.NewStorageMonitor, async (pushNotif) => {
+      await this.onNewStorageMonitorPush(pushNotif);
+    });
   }
 }

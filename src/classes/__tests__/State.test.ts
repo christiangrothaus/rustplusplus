@@ -1,51 +1,24 @@
-import DiscordWrapper from '../DiscordWrapper';
 import State, { SAVE_DATA_PATH } from '../State';
 import fs from 'fs';
-import BaseSmartMessage from '../messages/BaseSmartMessage';
-import BaseEntityInfo from '../entityInfo/BaseEntityInfo';
-import SmartSwitchMessage from '../messages/SmartSwitchMessage';
-import SmartSwitchEntityInfo from '../entityInfo/SmartSwitchEntityInfo';
-import { Message, TextChannel } from 'discord.js';
-import StorageMonitorMessage from '../messages/StorageMonitorMessage';
+import Switch from '../entities/Switch';
+import Alarm from '../entities/Alarm';
+import StorageMonitor from '../entities/StorageMonitor';
+import SwitchEntityInfo from '../entityInfo/SwitchEntityInfo';
+import AlarmEntityInfo from '../entityInfo/AlarmEntityInfo';
 import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
-import { EntityType } from '../../models/RustPlus.models';
-import SmartAlarmMessage from '../messages/SmartAlarmMessage';
 
 describe('state', () => {
-  let genericState: State;
-
-  let RUST_SERVER_HOST: string;
-  let RUST_SERVER_PORT: number;
-  let GUILD_ID: string;
-  let RUST_TOKEN: string;
-  let MESSAGES: Map<string, BaseSmartMessage<BaseEntityInfo>>;
-
   beforeAll(() => {
     jest.spyOn(Date, 'now').mockReturnValue(1);
-
-    RUST_SERVER_HOST = 'localhost';
-    RUST_SERVER_PORT = 25565;
-    GUILD_ID = '1234';
-    RUST_TOKEN = 'myToken';
-    MESSAGES = new Map();
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const messageOne = new SmartSwitchMessage({ send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;} } as TextChannel, new SmartSwitchEntityInfo('name', 'entityId'));
-    messageOne.message = { id: 'messageId1' } as Message;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const messageTwo = new StorageMonitorMessage({ send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId2' } as Message<true>;} } as TextChannel, new StorageMonitorEntityInfo('name', 'entityId', 100));
-    messageTwo.message = { id: 'messageId2' } as Message;
-
-    MESSAGES.set('messageId1', messageOne);
-    MESSAGES.set('messageId2', messageTwo);
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
   });
 
-  beforeEach(() => {
-    genericState = new State();
+  afterEach(() => {
+    State['instance'] = undefined;
   });
 
-  it('should create a new state', () => {
-    const state = new State();
+  it('should return the the state instance', () => {
+    const state = State.getInstance();
 
     expect(state).toBeDefined();
   });
@@ -53,226 +26,104 @@ describe('state', () => {
   describe('save', () => {
     it('should save the correct data', () => {
       const writeFileSyncSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-      genericState.rustServerHost = RUST_SERVER_HOST;
-      genericState.rustServerPort = RUST_SERVER_PORT;
-      genericState.guildId = GUILD_ID;
-      genericState.rustToken = RUST_TOKEN;
-      genericState.messages = MESSAGES;
+      const state = State.getInstance();
+      state.rustToken = 'myToken';
+      state.rustServerHost = 'localhost';
+      state.rustServerPort = 25565;
+      state.guildId = '1234';
+      state.pushIds = ['messageId1', 'messageId2'];
+      state.pairedSwitches.set('entityId', new Switch(new SwitchEntityInfo('name', 'entityId', true)));
+      state.pairedStorageMonitors.set('entityId', new StorageMonitor(new StorageMonitorEntityInfo('name', 'entityId', 100)));
+      state.pairedAlarms.set('entityId', new Alarm(new AlarmEntityInfo('name', 'entityId')));
 
-      const expected = `{
-  "rustServerHost": "localhost",
-  "rustServerPort": 25565,
-  "guildId": "1234",
-  "rustToken": "myToken",
-  "messages": [
-    {
-      "messageId": "messageId1",
-      "entityInfo": {
-        "name": "name",
-        "entityId": "entityId",
-        "entityType": "Switch"
-      }
-    },
-    {
-      "messageId": "messageId2",
-      "entityInfo": {
-        "name": "name",
-        "entityId": "entityId",
-        "entityType": "StorageMonitor",
-        "capacity": 100
-      }
-    }
-  ]
-}`;
+      const expected = JSON.stringify({
+        'rustServerHost': 'localhost',
+        'rustServerPort': 25565,
+        'guildId': '1234',
+        'rustToken': 'myToken',
+        'pushIds': [
+          'messageId1',
+          'messageId2'
+        ],
+        'pairedSwitches': [
+          {
+            'name': 'name',
+            'entityId': 'entityId',
+            'entityType': 'Switch',
+            'isActive': true
+          }
+        ],
+        'pairedAlarms': [
+          {
+            'name': 'name',
+            'entityId': 'entityId',
+            'entityType': 'Alarm'
+          }
+        ],
+        'pairedStorageMonitors': [
+          {
+            'name': 'name',
+            'entityId': 'entityId',
+            'entityType': 'StorageMonitor',
+            'capacity': 100
+          }
+        ]
+      }, null, 2);
 
-      genericState.save();
+      state.save();
 
       expect(writeFileSyncSpy).toHaveBeenCalledWith(SAVE_DATA_PATH, expected, 'utf-8');
     });
 
     it('should throw an error if it fails to save', () => {
       jest.spyOn(fs, 'writeFileSync').mockImplementation(() => { throw new Error('File not found'); });
-      genericState.rustServerHost = RUST_SERVER_HOST;
-      genericState.rustServerPort = RUST_SERVER_PORT;
-      genericState.guildId = GUILD_ID;
-      genericState.rustToken = RUST_TOKEN;
-      genericState.messages = MESSAGES;
+      const state = State.getInstance();
 
-      expect(() => genericState.save()).toThrow('Failed to save data: File not found');
+      expect(() => state.save()).toThrow('Failed to save data: File not found');
     });
   });
 
-  describe('loadFromSave', () => {
-    it('should load the correct data from save', async () => {
+  describe('getInstance', () => {
+    it('should load the correct data from the save', async () => {
+      const RUST_SERVER_HOST = 'localhost';
+      const RUST_SERVER_PORT = 28083;
+      const GUILD_ID = '1234';
+      const RUST_TOKEN = 'myToken';
+      const PAIRED_SWITCHES = [new Switch(new SwitchEntityInfo('switch', '1', true))];
+      const PAIRED_ALARMS = [new Alarm(new AlarmEntityInfo('alarm', '2'))];
+      const PAIRED_STORAGE_MONITORS = [new StorageMonitor(new StorageMonitorEntityInfo('storageMonitor', '3', 100))];
       const data = {
         rustServerHost: RUST_SERVER_HOST,
         rustServerPort: RUST_SERVER_PORT,
         guildId: GUILD_ID,
         rustToken: RUST_TOKEN,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        messages: Array.from(MESSAGES).map(([messageId, message]) => message)
+        pairedSwitches: PAIRED_SWITCHES,
+        pairedAlarms: PAIRED_ALARMS,
+        pairedStorageMonitors: PAIRED_STORAGE_MONITORS
       };
-      const discordClient = new DiscordWrapper(genericState);
       jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(data));
+      const expectedPairedSwitches = new Map<string, Switch>();
+      expectedPairedSwitches.set('1', PAIRED_SWITCHES[0]);
+      const expectedPairedAlarms = new Map<string, Alarm>();
+      expectedPairedAlarms.set('2', PAIRED_ALARMS[0]);
+      const expectedPairedStorageMonitors = new Map<string, StorageMonitor>();
+      expectedPairedStorageMonitors.set('3', PAIRED_STORAGE_MONITORS[0]);
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      discordClient.switchChannel = { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;} } as TextChannel;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      discordClient.notificationChannel = { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId2' } as Message<true>;} } as TextChannel;
-      await genericState.loadFromSave(discordClient);
+      const state = State.getInstance();
 
-      expect(genericState.rustServerHost).toBe(RUST_SERVER_HOST);
-      expect(genericState.rustServerPort).toBe(RUST_SERVER_PORT);
-      expect(genericState.guildId).toBe(GUILD_ID);
-      expect(genericState.rustToken).toBe(RUST_TOKEN);
-      expect(JSON.stringify(genericState.messages)).toEqual(JSON.stringify(MESSAGES));
+      expect(state.rustServerHost).toBe(RUST_SERVER_HOST);
+      expect(state.rustServerPort).toBe(RUST_SERVER_PORT);
+      expect(state.guildId).toBe(GUILD_ID);
+      expect(state.rustToken).toBe(RUST_TOKEN);
+      expect(state.pairedSwitches).toEqual(expectedPairedSwitches);
+      expect(state.pairedAlarms).toEqual(expectedPairedAlarms);
+      expect(state.pairedStorageMonitors).toEqual(expectedPairedStorageMonitors);
     });
 
-    it('should reject if it fails to load', async () => {
+    it('should throw if it fails to load', async () => {
       jest.spyOn(fs, 'readFileSync').mockImplementation(() => { throw new Error('ENOENT'); });
-      const discordClient = new DiscordWrapper(genericState);
 
-      await expect(genericState.loadFromSave(discordClient)).rejects.toThrow('ENOENT');
-    });
-  });
-
-  describe('createMessageFromData', () => {
-    it('should create a SmartSwitchMessage', async () => {
-      const messageData = {
-        messageId: 'messageId1',
-        entityInfo: {
-          name: 'name',
-          entityId: 'entityId',
-          entityType: EntityType.Switch,
-          isActive: true
-        }
-      };
-      const channels = {
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        switchChannel: { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;} } as TextChannel,
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        notificationChannel: { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId2' } as Message<true>;} } as TextChannel
-      };
-      const message = await genericState.createMessageFromData(channels, messageData);
-
-      expect(message).toBeInstanceOf(SmartSwitchMessage);
-      expect((message as SmartSwitchMessage).entityInfo.name).toBe('name');
-      expect((message as SmartSwitchMessage).entityInfo.entityId).toBe('entityId');
-      expect((message as SmartSwitchMessage).entityInfo.isActive).toBe(true);
-    });
-
-    it('should create a SmartAlarmMessage', async () => {
-      const messageData = {
-        messageId: 'messageId1',
-        entityInfo: {
-          name: 'name',
-          entityId: 'entityId',
-          entityType: EntityType.Alarm
-        }
-      };
-      const channels = {
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        switchChannel: { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;} } as TextChannel,
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        notificationChannel: { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId2' } as Message<true>;} } as TextChannel
-      };
-      const message = await genericState.createMessageFromData(channels, messageData);
-
-      expect(message).toBeInstanceOf(SmartAlarmMessage);
-      expect((message as SmartAlarmMessage).entityInfo.name).toBe('name');
-      expect((message as SmartAlarmMessage).entityInfo.entityId).toBe('entityId');
-    });
-
-    it('should create a StorageMonitorMessage', async () => {
-      const messageData = {
-        messageId: 'messageId1',
-        entityInfo: {
-          name: 'name',
-          entityId: 'entityId',
-          entityType: EntityType.StorageMonitor,
-          capacity: 100
-        }
-      };
-      const channels = {
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        switchChannel: { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;} } as TextChannel,
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        notificationChannel: { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId2' } as Message<true>;} } as TextChannel
-      };
-      const message = await genericState.createMessageFromData(channels, messageData);
-
-      expect(message).toBeInstanceOf(StorageMonitorMessage);
-      expect((message as StorageMonitorMessage).entityInfo.name).toBe('name');
-      expect((message as StorageMonitorMessage).entityInfo.entityId).toBe('entityId');
-      expect((message as StorageMonitorMessage).entityInfo.capacity).toBe(100);
-    });
-
-    it('should throw an error if the entity type is unknown', async () => {
-      const messageData = {
-        messageId: 'messageId1',
-        entityInfo: {
-          name: 'name',
-          entityId: 'entityId'
-        }
-      };
-
-      const channels = {
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        switchChannel: { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;} } as TextChannel,
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        notificationChannel: { send: async (options: string ): Promise<Message<true>> => {return { id: 'messageId2' } as Message<true>;} } as TextChannel
-      };
-
-      //@ts-expect-error - Testing for error
-      await expect(genericState.createMessageFromData(channels, messageData)).rejects.toThrow('Unknown entity type');
-    });
-  });
-
-  describe('attemptToSendMessage', () => {
-    it('should just set the message if it already exists', async () => {
-      //eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const switchChannel = { messages: { fetch: async (messageId: string): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;} } } as TextChannel;
-      const message = new SmartSwitchMessage(switchChannel, new SmartSwitchEntityInfo('name', 'entityId'));
-
-      const sentMessage = await genericState['attemptToSendMessage'](message, 'messageId1');
-
-      expect(sentMessage.message).toEqual({ id: 'messageId1' });
-    });
-
-    it('should send the message if no messageId is provided', async () => {
-      const switchChannel = {
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        send: async (content: string): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;},
-        messages: {
-          //eslint-disable-next-line @typescript-eslint/no-unused-vars
-          fetch: async (messageId: string): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;}
-        }
-      } as TextChannel;
-      const message = new SmartSwitchMessage(switchChannel, new SmartSwitchEntityInfo('name', 'entityId'));
-      const messageSendSpy = jest.spyOn(message, 'send');
-
-      await genericState['attemptToSendMessage'](message);
-
-      expect(messageSendSpy).toHaveBeenCalled();
-    });
-
-    it('should send the message if the fetch call errors', async () => {
-      const switchChannel = {
-        //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        send: async (content: string): Promise<Message<true>> => {return { id: 'messageId1' } as Message<true>;},
-        messages: {
-          //eslint-disable-next-line @typescript-eslint/no-unused-vars
-          fetch: async (messageId: string): Promise<Message<true>> => {
-            throw new Error('Not found');
-            return { id: 'messageId1' } as Message<true>;}
-        }
-      } as TextChannel;
-      const message = new SmartSwitchMessage(switchChannel, new SmartSwitchEntityInfo('name', 'entityId'));
-      const messageSendSpy = jest.spyOn(message, 'send');
-
-      await genericState['attemptToSendMessage'](message);
-
-      expect(messageSendSpy).toHaveBeenCalled();
+      expect(() => State.getInstance()).toThrow('ENOENT');
     });
   });
 });

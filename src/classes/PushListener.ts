@@ -4,6 +4,8 @@ import { EntityType } from '../models/RustPlus.models';
 import path from 'path';
 import { Awaitable } from 'discord.js';
 import Manager from './Manager';
+import State from './State';
+import { EventEmitter } from 'events';
 
 type Push = {
   notification: {
@@ -40,8 +42,6 @@ export type PushNotificationBody = {
   playerId: string
 };
 
-type EntityCallback = (pushNotification: PushNotificationBody) => Awaitable<void>;
-
 export type PushConfig = {
   fcm_credentials: {
     keys: {
@@ -62,16 +62,26 @@ export type PushConfig = {
   }
 };
 
-export const configFile = path.join(__dirname, '../../rustplus.config.json');
+export enum PushEvents {
+  NewSwitch = 'NewSwitch',
+  NewAlarm = 'NewAlarm',
+  NewStorageMonitor = 'NewStorageMonitor'
+}
 
-export default class PushListener {
+export const CONFIG_FILE = path.join(__dirname, '../../rustplus.config.json');
+
+declare interface PushListener {
+  on(event: PushEvents, listener: (body: PushNotificationBody) => Awaitable<void>): this;
+}
+class PushListener extends EventEmitter {
   config: PushConfig;
 
   listener;
 
-  private entityPushCallbacks: Array<EntityCallback> = [];
+  private state = State.getInstance();
 
   constructor() {
+    super();
     this.config = this.loadConfig();
 
     if (!this.config.fcm_credentials){
@@ -79,33 +89,46 @@ export default class PushListener {
     }
   }
 
-  public onEntityPush(callback: EntityCallback): void {
-    this.entityPushCallbacks.push(callback);
-  }
-
   public async start(manager: Manager): Promise<void> {
-    const { state } = manager;
-    this.listener = await push.listen({ ...this.config.fcm_credentials, persistentIds: state.pushIds }, (push: Push) => {
+    this.listener = await push.listen({ ...this.config.fcm_credentials, persistentIds: this.state.pushIds }, (push: Push) => {
       const { notification, persistentId } = push;
       const body = JSON.parse(notification.data.body) as PushNotificationBody;
-      if (state.rustToken !== body.playerToken) {
-        state.rustToken = body.playerToken;
-        manager.rustPlus.updateRustPlusCreds(state.rustServerHost, state.rustServerPort, body.playerToken);
+
+      if (this.state.rustToken !== body.playerToken) {
+        this.state.rustToken = body.playerToken;
+        manager.rustPlus.updateRustPlusCreds(this.state.rustServerHost, this.state.rustServerPort, body.playerToken);
       }
-      state.pushIds.push(persistentId);
-      this.entityPushCallbacks.forEach(async (callback) => await callback(body));
+      this.state.pushIds.push(persistentId);
+
+      switch (body.entityType) {
+        case EntityType.Switch: {
+          this.emit(PushEvents.NewSwitch, body);
+          break;
+        }
+        case EntityType.Alarm: {
+          this.emit(PushEvents.NewAlarm, body);
+          break;
+        }
+        case EntityType.StorageMonitor: {
+          this.emit(PushEvents.NewStorageMonitor, body);
+          break;
+        }
+      }
     });
   }
 
   public destroy(): void {
     this.listener.destroy();
+    this.removeAllListeners();
   }
 
   private loadConfig(): PushConfig {
     try {
-      return JSON.parse(fs.readFileSync('rustplus.config.json', 'utf-8'));
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
     } catch (err) {
       throw new Error('Failed to load rustplus.config.json');
     }
   }
 }
+
+export default PushListener;

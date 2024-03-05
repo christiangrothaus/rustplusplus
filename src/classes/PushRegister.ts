@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { configFile } from './PushListener';
+import { CONFIG_FILE } from './PushListener';
 import push from 'push-receiver';
 import path from 'path';
 import axios from 'axios';
@@ -52,13 +52,13 @@ export default class PushRegister {
         expo_push_token: expoPushToken,
         rustplus_auth_token: rustplusAuthToken
       });
-      console.log('FCM, Expo and Rust+ auth tokens have been saved to ' + configFile);
+      console.log('FCM, Expo and Rust+ auth tokens have been saved to ' + CONFIG_FILE);
     }
   }
 
   private readConfig() {
     try {
-      return JSON.parse(fs.readFileSync(configFile, 'utf-8'));
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
     } catch (err) {
       return {};
     }
@@ -74,7 +74,7 @@ export default class PushRegister {
     const json = JSON.stringify(updatedConfig, null, 2);
 
     // save updated config to config file
-    fs.writeFileSync(configFile, json, 'utf8');
+    fs.writeFileSync(CONFIG_FILE, json, 'utf8');
   }
 
   private async getExpoPushToken(fcmCredentials: any): Promise<string> {

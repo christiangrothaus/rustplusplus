@@ -1,26 +1,86 @@
-import { ChannelType, Client, Events, Guild, Interaction, Message, PermissionsBitField, TextChannel } from 'discord.js';
-import DiscordWrapper from '../DiscordWrapper';
-import State from '../State';
-import SmartSwitchEntityInfo from '../entityInfo/SmartSwitchEntityInfo';
-import SmartSwitchMessage from '../messages/SmartSwitchMessage';
-import SmartAlarmMessage from '../messages/SmartAlarmMessage';
-import SmartAlarmEntityInfo from '../entityInfo/SmartAlarmEntityInfo';
-import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
-import StorageMonitorMessage from '../messages/StorageMonitorMessage';
+import {
+  ButtonInteraction,
+  CategoryChannel,
+  CategoryCreateChannelOptions,
+  ChatInputCommandInteraction,
+  Collection,
+  Events,
+  ChannelType,
+  Guild,
+  GuildChannelCreateOptions,
+  ModalSubmitInteraction,
+  OAuth2Guild,
+  Role,
+  TextChannel
+} from 'discord.js';
+import DiscordWrapper, { InteractionCreateEvents } from '../DiscordWrapper';
 import CommandManager from '../CommandManager';
 
-describe('DiscordWrapper', () => {
-  describe('ctor', () => {
-    it('should create a new instance of a discord client', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
+const mockGuildCollection = new Collection<string, OAuth2Guild>();
+const mockCreatedCategoryChildren = {
+  create: jest.fn().mockImplementation((childOptions: CategoryCreateChannelOptions) => {
+    return {
+      name: childOptions.name,
+      type: childOptions.type
+    } as TextChannel;
+  })
+};
+// @ts-expect-error - mocking guild
+const mockGuild = {
+  id: 'guildId',
+  roles: {
+    everyone: {} as Role
+  },
+  channels: {
+    fetch: jest.fn().mockResolvedValue([]),
+    create: jest.fn().mockImplementation((options: GuildChannelCreateOptions & { type: ChannelType.GuildCategory; }) => {
+      if (options.type === ChannelType.GuildCategory) {
+        // @ts-expect-error - mocking category channel
+        return {
+          children: mockCreatedCategoryChildren
+        } as CategoryChannel;
+      }
+    })
+  }
+} as Guild;
+// @ts-expect-error - mocking guild
+mockGuildCollection.set('guildId', { fetch: jest.fn().mockResolvedValue(mockGuild) } as OAuth2Guild);
 
-      expect(discordWrapper.client).toBeInstanceOf(Client);
-    });
+jest.mock('discord.js', () => {
+  return {
+    ...jest.requireActual('discord.js'),
+    Client: jest.fn().mockImplementation(() => {
+      return {
+        login: jest.fn().mockResolvedValue('token'),
+        destroy: jest.fn().mockResolvedValue(undefined),
+        guilds: {
+          fetch: jest.fn().mockResolvedValue(mockGuildCollection)
+        },
+        removeAllListeners: jest.fn(),
+        on: jest.fn(),
+        once: jest.fn(),
+        user: {
+          id: 'botId'
+        }
+      };
+    }),
+    PermissionsBitField: jest.fn().mockImplementation(() => {
+      return {
+        add: jest.fn(),
+        remove: jest.fn()
+      };
+    })
+  };
+});
+
+describe('DiscordWrapper', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('start', () => {
     it('should login to with the discord client', async () => {
-      const discordWrapper = new DiscordWrapper({} as State);
+      const discordWrapper = new DiscordWrapper();
       const loginSpy = jest.spyOn(discordWrapper.client, 'login').mockResolvedValue('token');
 
       await discordWrapper.start();
@@ -31,7 +91,7 @@ describe('DiscordWrapper', () => {
 
   describe('destroy', () => {
     it('should remove all listeners and destroy the discord client', async () => {
-      const discordWrapper = new DiscordWrapper({} as State);
+      const discordWrapper = new DiscordWrapper();
       const destroySpy = jest.spyOn(discordWrapper.client, 'destroy').mockResolvedValue();
       // @ts-expect-error - mocking to avoid actual call
       const removeListenersSpy = jest.spyOn(discordWrapper.client, 'removeAllListeners').mockImplementation(() => {});
@@ -43,266 +103,95 @@ describe('DiscordWrapper', () => {
     });
   });
 
-  describe('onButtonInteraction', () => {
-    it('should add a callback to the buttonCallbacks array', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const callback = jest.fn();
+  describe('sendPairedDeviceMessage', () => {
 
-      discordWrapper.onButtonInteraction(callback);
-
-      expect(discordWrapper['buttonCallbacks']).toContain(callback);
-    });
-  });
-
-  describe('onModalSubmitInteraction', () => {
-    it('should add a callback to the modalSubmitCallbacks array', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const callback = jest.fn();
-
-      discordWrapper.onModalSubmitInteraction(callback);
-
-      expect(discordWrapper['modalSubmitCallbacks']).toContain(callback);
-    });
-  });
-
-  describe('onChatInputCommandInteraction', () => {
-    it('should add a callback to the chatInputCommandCallbacks array', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const callback = jest.fn();
-
-      discordWrapper.onChatInputCommandInteraction(callback);
-
-      expect(discordWrapper['chatInputCommandCallbacks']).toContain(callback);
-    });
-  });
-
-  describe('sendSwitchMessage', () => {
-    it('should send a message to the switch channel', async () => {
-      const discordWrapper = new DiscordWrapper({ messages: new Map() } as State);
-      // @ts-expect-error - mocking channel
-      discordWrapper.switchChannel = {
-        send: jest.fn().mockResolvedValue({} as Message)
-      };
-      const sendMessageSpy = jest.spyOn(SmartSwitchMessage.prototype, 'send').mockImplementation(() => { return {} as Promise<Message>;});
-
-      await discordWrapper.sendSwitchMessage(new SmartSwitchEntityInfo('name', 'id', true));
-
-      expect(sendMessageSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('sendAlarmMessage', () => {
-    it('should send a message to the notfication channel', async () => {
-      const discordWrapper = new DiscordWrapper({ messages: new Map() } as State);
-      // @ts-expect-error - mocking channel
-      discordWrapper.notificationChannel = {
-        send: jest.fn().mockResolvedValue({} as Message)
-      };
-      const sendMessageSpy = jest.spyOn(SmartAlarmMessage.prototype, 'send').mockImplementation(() => { return {} as Promise<Message>;});
-
-      await discordWrapper.sendAlarmMessage(new SmartAlarmEntityInfo('name', 'id'));
-
-      expect(sendMessageSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('sendStorageMessage', () => {
-    it('should send a message to the notification channel', async () => {
-      const discordWrapper = new DiscordWrapper({ messages: new Map() } as State);
-      // @ts-expect-error - mocking channel
-      discordWrapper.notificationChannel = {
-        send: jest.fn().mockResolvedValue({} as Message)
-      };
-      const sendMessageSpy = jest.spyOn(StorageMonitorMessage.prototype, 'send').mockImplementation(() => { return {} as Promise<Message>;});
-
-      await discordWrapper.sendStorageMessage(new StorageMonitorEntityInfo('name', 'id', 100));
-
-      expect(sendMessageSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('updateMessage', () => {
-    it('should update the message with the new entity info', async () => {
-      const discordWrapper = new DiscordWrapper({ messages: new Map() } as State);
-      const entityInfo = new SmartSwitchEntityInfo('name', 'id', true);
-      const discordMessage = { edit: jest.fn().mockResolvedValue({} as Message) };
-      const message = new SmartSwitchMessage({} as TextChannel, entityInfo);
-      // @ts-expect-error - mocking message
-      message.message = discordMessage;
-      discordWrapper.state.messages.set('id', message);
-
-      await discordWrapper.updateMessage('id', { name: 'newName' });
-
-      expect(message.entityInfo.name).toBe('newName');
-      expect(discordWrapper.state.messages.get('id')?.entityInfo.name).toBe('newName');
-    });
-  });
-
-  describe('deleteMessage', () => {
-    it('should delete the message', async () => {
-      const discordWrapper = new DiscordWrapper({ messages: new Map() } as State);
-      const entityInfo = new SmartSwitchEntityInfo('name', 'id', true);
-      const discordMessage = { delete: jest.fn().mockResolvedValue({} as Message) };
-      const message = new SmartSwitchMessage({} as TextChannel, entityInfo);
-      // @ts-expect-error - mocking message
-      message.message = discordMessage;
-      discordWrapper.state.messages.set('id', message);
-
-      await discordWrapper.deleteMessage('id');
-
-      expect(discordMessage.delete).toHaveBeenCalled();
-      expect(discordWrapper.state.messages.get('id')).toBeUndefined();
-    });
-  });
-
-  describe('onChannelsReady', () => {
-    it('should call the callback if the channels are already set', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      discordWrapper.switchChannel = {} as TextChannel;
-      discordWrapper.notificationChannel = {} as TextChannel;
-      const callback = jest.fn();
-
-      discordWrapper.onChannelsReady(callback);
-
-      expect(callback).toHaveBeenCalled();
-    });
-
-    it('should add the callback to the channelsReadyCallbacks array if the channels are not set', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const callback = jest.fn();
-
-      discordWrapper.onChannelsReady(callback);
-
-      expect(discordWrapper['channelsReadyCallbacks']).toContain(callback);
-    });
   });
 
   describe('createChannels', () => {
     it('should create the channels if they do not exist', async () => {
-      const createChannelChild = jest.fn().mockResolvedValue({});
-      const createChannelCategory = jest.fn().mockResolvedValue({
-        children: {
-          create: createChannelChild
-        }
-      });
-      const discordWrapper = new DiscordWrapper({} as State);
-      const guild = {
-        roles: {
-          everyone: 'everyone'
-        },
-        channels: {
-          fetch: jest.fn().mockResolvedValue([]),
-          create: createChannelCategory
-        }
-      };
-      // @ts-expect-error - mocking guild
-      discordWrapper.client.guilds = { fetch: jest.fn().mockResolvedValue(guild) };
+      const discordWrapper = new DiscordWrapper();
 
-      await discordWrapper['createChannels']('guildId');
+      await discordWrapper['createChannels'](mockGuild);
 
-      expect(createChannelCategory).toHaveBeenCalledWith({
-        name: 'Rust++',
-        type: ChannelType.GuildCategory,
-        permissionOverwrites: [{
-          id: 'everyone',
-          deny: new PermissionsBitField(['SendMessages']),
-          allow: new PermissionsBitField(['ViewChannel', 'ReadMessageHistory'])
-        }]
-      });
-      expect(createChannelChild).toHaveBeenCalledWith({ name: 'Notifications', type: ChannelType.GuildText });
-      expect(createChannelChild).toHaveBeenCalledWith({ name: 'Switches', type: ChannelType.GuildText });
+      expect(discordWrapper['notificationsChannel']).toEqual({ name: 'Notifications', type: ChannelType.GuildText });
+      expect(discordWrapper['pairedDevicesChannel']).toEqual({ name: 'Paired Devices', type: ChannelType.GuildText });
     });
 
-    it('should set the channels if they already exist', async () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const mockNotificationChannel = { name: 'Notifications', type: ChannelType.GuildText };
-      const mockSwitchChannel = { name: 'Switches', type: ChannelType.GuildText };
-      const mockCategoryChannel = {
-        name: 'Rust++',
-        type: ChannelType.GuildCategory,
-        children: {
-          cache: [
-            mockNotificationChannel,
-            mockSwitchChannel
-          ]
-        }
+    it('should get the channels if they already exist', async () => {
+      const mockChildren = {
+        cache: [
+          { name: 'Notifications', type: ChannelType.GuildText },
+          { name: 'Paired Devices', type: ChannelType.GuildText }
+        ]
       };
-      const guild = {
-        roles: {
-          everyone: 'everyone'
-        },
-        channels: {
-          fetch: jest.fn().mockResolvedValue([mockCategoryChannel])
-        }
-      };
-      // @ts-expect-error - mocking guild
-      discordWrapper.client.guilds = { fetch: jest.fn().mockResolvedValue(guild) };
+      mockGuild.channels.fetch = jest.fn().mockResolvedValue([{ name: 'Rust++', type: ChannelType.GuildCategory, children: mockChildren }]);
+      const discordWrapper = new DiscordWrapper();
 
-      await discordWrapper['createChannels']('guildId');
+      await discordWrapper['createChannels'](mockGuild);
 
-      expect(discordWrapper.notificationChannel).toBe(mockNotificationChannel);
-      expect(discordWrapper.switchChannel).toBe(mockSwitchChannel);
+      expect(mockGuild.channels.create).not.toHaveBeenCalled();
+      expect(discordWrapper['notificationsChannel']).toEqual({ name: 'Notifications', type: ChannelType.GuildText });
+      expect(discordWrapper['pairedDevicesChannel']).toEqual({ name: 'Paired Devices', type: ChannelType.GuildText });
     });
   });
 
   describe('onGuildJoin', () => {
-    it('should create the channels and command manager', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
+    it('should load the discord commands', () => {
+      const discordWrapper = new DiscordWrapper();
       const loadCommandsSpy = jest.spyOn(CommandManager.prototype, 'loadCommands').mockImplementation(async () => {});
       discordWrapper['createChannels'] = jest.fn();
 
       discordWrapper['onGuildJoin']({ id: 'guildId' } as Guild);
 
-      expect(discordWrapper['createChannels']).toHaveBeenCalledWith('guildId');
       expect(loadCommandsSpy).toHaveBeenCalled();
     });
   });
 
   describe('onInteractionCreate', () => {
-    it('should call the button callbacks if the interaction is a button', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const callback = jest.fn();
-      discordWrapper['buttonCallbacks'].push(callback);
-
+    it('should emit a button interaction if the interaction is from a button', () => {
+      const discordWrapper = new DiscordWrapper();
+      const emitSpy = jest.spyOn(discordWrapper, 'emit');
       // @ts-expect-error - mocking interaction
-      discordWrapper['onInteractionCreate']({ isButton: jest.fn().mockReturnValue(true) } as Interaction);
+      const interaction = { isButton: jest.fn().mockReturnValue(true) } as ButtonInteraction;
 
-      expect(callback).toHaveBeenCalled();
+      discordWrapper['onInteractionCreate'](interaction);
+
+      expect(emitSpy).toHaveBeenCalledWith(InteractionCreateEvents.Button, interaction);
     });
 
-    it('should call the modal submit callbacks if the interaction is a modal submit', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const callback = jest.fn();
-      discordWrapper['modalSubmitCallbacks'].push(callback);
-
+    it('should emit a modal submit interaction if the interaction is from a modal submission', () => {
+      const discordWrapper = new DiscordWrapper();
+      const emitSpy = jest.spyOn(discordWrapper, 'emit');
       // @ts-expect-error - mocking interaction
-      discordWrapper['onInteractionCreate']({
-        isButton: jest.fn().mockReturnValue(false),
-        isModalSubmit: jest.fn().mockReturnValue(true)
-      } as Interaction);
+      const interaction = {
+        isModalSubmit: jest.fn().mockReturnValue(true),
+        isButton: jest.fn().mockReturnValue(false)
+      } as ModalSubmitInteraction;
 
-      expect(callback).toHaveBeenCalled();
+      discordWrapper['onInteractionCreate'](interaction);
+
+      expect(emitSpy).toHaveBeenCalledWith(InteractionCreateEvents.ModalSubmit, interaction);
     });
 
-    it('should call the chat input command callbacks if the interaction is a chat input command', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const callback = jest.fn();
-      discordWrapper['chatInputCommandCallbacks'].push(callback);
-
+    it('should emit a chat input command interaction if the interaction is from a chat input command', () => {
+      const discordWrapper = new DiscordWrapper();
+      const emitSpy = jest.spyOn(discordWrapper, 'emit');
       // @ts-expect-error - mocking interaction
-      discordWrapper['onInteractionCreate']({
+      const interaction = {
+        isChatInputCommand: jest.fn().mockReturnValue(true),
         isButton: jest.fn().mockReturnValue(false),
-        isModalSubmit: jest.fn().mockReturnValue(false),
-        isChatInputCommand: jest.fn().mockReturnValue(true)
-      } as Interaction);
+        isModalSubmit: jest.fn().mockReturnValue(false)
+      } as ChatInputCommandInteraction;
 
-      expect(callback).toHaveBeenCalled();
+      discordWrapper['onInteractionCreate'](interaction);
+
+      expect(emitSpy).toHaveBeenCalledWith(InteractionCreateEvents.ChatInputCommand, interaction);
     });
   });
 
   describe('registerListeners', () => {
     it('should register the listeners for the discord client', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
+      const discordWrapper = new DiscordWrapper();
       discordWrapper['createChannels'] = jest.fn();
       discordWrapper['onGuildJoin'] = jest.fn();
       discordWrapper['onInteractionCreate'] = jest.fn();
@@ -314,32 +203,8 @@ describe('DiscordWrapper', () => {
 
       discordWrapper['registerListeners']();
 
-      expect(discordWrapper.client.once).toHaveBeenCalledWith(Events.GuildCreate, discordWrapper['onGuildJoin']);
-      expect(discordWrapper.client.on).toHaveBeenCalledWith(Events.InteractionCreate, discordWrapper['onInteractionCreate']);
-    });
-  });
-
-  describe('callChannelsReadyCallbacks', () => {
-    it('should call the callback if the channels are set', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      discordWrapper.switchChannel = {} as TextChannel;
-      discordWrapper.notificationChannel = {} as TextChannel;
-      const callback = jest.fn();
-      discordWrapper['channelsReadyCallbacks'] = [callback];
-
-      discordWrapper['callChannelsReadyCallbacks']();
-
-      expect(callback).toHaveBeenCalled();
-    });
-
-    it('should not call the callback if the channels are not set', () => {
-      const discordWrapper = new DiscordWrapper({} as State);
-      const callback = jest.fn();
-      discordWrapper['channelsReadyCallbacks'] = [callback];
-
-      discordWrapper['callChannelsReadyCallbacks']();
-
-      expect(callback).not.toHaveBeenCalled();
+      expect(discordWrapper.client.once).toHaveBeenCalledWith(Events.GuildCreate, expect.any(Function));
+      expect(discordWrapper.client.on).toHaveBeenCalledWith(Events.InteractionCreate, expect.any(Function));
     });
   });
 });
