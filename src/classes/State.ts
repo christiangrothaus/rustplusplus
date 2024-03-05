@@ -1,15 +1,11 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import BaseSmartMessage, { MessageData } from './messages/BaseSmartMessage';
-import BaseEntityInfo from './entityInfo/BaseEntityInfo';
-import DiscordWrapper, { RustChannels } from './DiscordWrapper';
-import SmartSwitchMessage from './messages/SmartSwitchMessage';
-import SmartAlarmMessage from './messages/SmartAlarmMessage';
-import StorageMonitorMessage from './messages/StorageMonitorMessage';
+import fs from 'fs';
+import path from 'path';
+import Switch from './entities/Switch';
+import StorageMonitor from './entities/StorageMonitor';
+import Alarm from './entities/Alarm';
+import SwitchEntityInfo from './entityInfo/SwitchEntityInfo';
+import AlarmEntityInfo from './entityInfo/AlarmEntityInfo';
 import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
-import SmartAlarmEntityInfo from './entityInfo/SmartAlarmEntityInfo';
-import SmartSwitchEntityInfo from './entityInfo/SmartSwitchEntityInfo';
-import { EntityType } from '../models/RustPlus.models';
 
 export const SAVE_DATA_PATH = path.join(__dirname + '../../../save.json');
 
@@ -19,7 +15,9 @@ export type DataToSaveModel = {
   guildId: string,
   rustToken: string
   pushIds: Array<string>,
-  messages: Array<BaseSmartMessage<BaseEntityInfo>>
+  pairedSwitches: Array<SwitchEntityInfo>,
+  pairedAlarms: Array<AlarmEntityInfo>,
+  pairedStorageMonitors: Array<StorageMonitorEntityInfo>
 };
 
 export type SavedDataModel = {
@@ -28,7 +26,9 @@ export type SavedDataModel = {
   guildId: string,
   rustToken: string,
   pushIds: Array<string>,
-  messages: Array<MessageData>
+  pairedSwitches: Array<SwitchEntityInfo>,
+  pairedAlarms: Array<AlarmEntityInfo>,
+  pairedStorageMonitors: Array<StorageMonitorEntityInfo>
 };
 
 export default class State {
@@ -44,9 +44,27 @@ export default class State {
 
   /**
    * @key the entity id
-   * @value the instantiated message
+   * @value the instantiated switch
    */
-  public messages: Map<string, BaseSmartMessage<BaseEntityInfo>> = new Map();
+  public pairedSwitches: Map<string, Switch> = new Map();
+
+  /**
+   * @key the entity id
+   * @value the instantiated alarm
+   */
+  public pairedAlarms: Map<string, Alarm> = new Map();
+
+  /**
+   * @key the entity id
+   * @value the instantiated storage monitor
+   */
+  public pairedStorageMonitors: Map<string, StorageMonitor> = new Map();
+
+  private static instance: State;
+
+  private constructor() {
+    this.loadFromSave();
+  }
 
   public save(): void {
     const data: DataToSaveModel = {
@@ -56,7 +74,11 @@ export default class State {
       rustToken: this.rustToken,
       pushIds: this.pushIds,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      messages: Array.from(this.messages).map(([messageId, message]) => message)
+      pairedSwitches: Array.from(this.pairedSwitches).map(([entityId, switchEntity]) => switchEntity.toJSON()),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      pairedAlarms: Array.from(this.pairedAlarms).map(([entityId, alarmEntity]) => alarmEntity.toJSON()),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      pairedStorageMonitors: Array.from(this.pairedStorageMonitors).map(([entityId, storageMonitorEntity]) => storageMonitorEntity.toJSON())
     };
     const json = JSON.stringify(data, null, 2);
 
@@ -67,96 +89,50 @@ export default class State {
     }
   }
 
-  public loadFromSave(discordClient: DiscordWrapper): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        const data = fs.readFileSync(SAVE_DATA_PATH, 'utf-8');
-        const saveData: SavedDataModel = JSON.parse(data);
+  public loadFromSave(): void {
+    try {
+      const data = fs.readFileSync(SAVE_DATA_PATH, 'utf-8');
+      const saveData: SavedDataModel = JSON.parse(data);
 
-        this.rustServerHost = saveData.rustServerHost;
-        this.rustServerPort = saveData.rustServerPort;
-        this.guildId = saveData.guildId;
-        this.rustToken = saveData.rustToken;
-        this.pushIds = saveData.pushIds || [];
+      this.rustServerHost = saveData.rustServerHost;
+      this.rustServerPort = saveData.rustServerPort;
+      this.guildId = saveData.guildId;
+      this.rustToken = saveData.rustToken;
+      this.pushIds = saveData.pushIds || [];
 
-        discordClient.onChannelsReady(async (channels) => {
-          const { messages } = saveData;
-
-          for (const msgData of messages) {
-            const message = await this.createMessageFromData(channels, msgData);
-            this.messages.set(message.message.id, message);
-          }
-        });
-
-        resolve();
-      } catch (e) {
-        if (e.code === 'ENOENT') {
-          resolve();
+      if (saveData.pairedSwitches) {
+        for (const entityInfo of saveData.pairedSwitches) {
+          const entity = new Switch(entityInfo);
+          this.pairedSwitches.set(entityInfo.entityId, entity);
         }
-        reject(e);
       }
-    });
+      if (saveData.pairedStorageMonitors) {
+        for (const entityInfo of saveData.pairedStorageMonitors) {
+          const entity = new StorageMonitor(entityInfo);
+          this.pairedStorageMonitors.set(entityInfo.entityId, entity);
+        }
+      }
+      if (saveData.pairedAlarms) {
+        for (const entityInfo of saveData.pairedAlarms) {
+          const entity = new Alarm(entityInfo);
+          this.pairedAlarms.set(entityInfo.entityId, entity);
+        }
+      }
+    } catch (e) {
+      throw new Error('Failed to load data: ' + e.message);
+    }
   }
 
-  public async createMessageFromData(channels: RustChannels, messageData: MessageData): Promise<BaseSmartMessage<BaseEntityInfo>> {
-    const { messageId } = messageData;
-
-    if (this.messages.has(messageData.entityInfo.entityId)) {
-      return this.messages.get(messageData.entityInfo.entityId);
-    }
-
-    let message: BaseSmartMessage<BaseEntityInfo>;
-    switch (messageData.entityInfo.entityType) {
-      case EntityType.Switch: {
-        const castedEntityInfo = messageData.entityInfo as SmartSwitchEntityInfo;
-        const entityInfo = new SmartSwitchEntityInfo(castedEntityInfo.name, castedEntityInfo.entityId, castedEntityInfo.isActive);
-        message = new SmartSwitchMessage(channels.switchChannel , entityInfo);
-        break;
-      }
-      case EntityType.Alarm: {
-        const castedEntityInfo = messageData.entityInfo as SmartAlarmEntityInfo;
-        const entityInfo = new SmartAlarmEntityInfo(castedEntityInfo.name, castedEntityInfo.entityId);
-        message = new SmartAlarmMessage(channels.notificationChannel, entityInfo);
-        break;
-      }
-      case EntityType.StorageMonitor: {
-        const castedEntityInfo = messageData.entityInfo as StorageMonitorEntityInfo;
-        const entityInfo = new StorageMonitorEntityInfo(castedEntityInfo.name, castedEntityInfo.entityId, castedEntityInfo.capacity);
-        message = new StorageMonitorMessage(channels.notificationChannel, entityInfo);
-        break;
-      }
-      default: {
-        throw new Error('Unknown entity type');
-      }
-    }
-
-    const msg = await this.attemptToSendMessage(message, messageId);
-
-    return msg;
+  public getPairedDevice(entityId: string): Switch | Alarm | StorageMonitor {
+    return this.pairedSwitches.get(entityId) || this.pairedAlarms.get(entityId) || this.pairedStorageMonitors.get(entityId);
   }
 
-  private async attemptToSendMessage(message: BaseSmartMessage<BaseEntityInfo>, messageId?: string): Promise<BaseSmartMessage<BaseEntityInfo>> {
-    if (messageId) {
-      try {
-        const discordMessage = await message.channel.messages.fetch(messageId);
-        message.message = discordMessage;
-      } catch (e) {
-        await message.send();
-      }
-    } else {
-      const discordMessages = message.channel.messages.cache;
-      const existingMessage = discordMessages.find((msg) => {
-        return msg.embeds[0].footer.text === message.entityInfo.entityId;
-      });
-      if (existingMessage) {
-        message.message = existingMessage;
-      } else {
-        await message.send();
-      }
+  public static getInstance(): State {
+    if (!State.instance) {
+      State.instance = new State();
+      State.instance.loadFromSave();
     }
 
-    this.messages.set(message.entityInfo.entityId, message);
-
-    return message;
+    return State.instance;
   }
 }

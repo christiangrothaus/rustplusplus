@@ -1,11 +1,17 @@
 import { EntityInfo, EntityType, Message } from '../../models/RustPlus.models';
-import RustPlusWrapper from '../RustPlusWrapper';
+import RustPlusWrapper, { RustPlusEvents } from '../RustPlusWrapper';
 import RustPlus from '@liamcottle/rustplus.js';
 
 describe('RustPlusWrapper', () => {
+  let wrapper: RustPlusWrapper;
+
+  afterEach(() => {
+    wrapper.disconnect();
+  });
+
   describe('ctor', () => {
     it('should set serverHost, serverPort, and rustToken', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token', 1234);
+      wrapper = new RustPlusWrapper('localhost', 'token', 1234);
 
       expect(wrapper.serverHost).toBe('localhost');
       expect(wrapper.serverPort).toBe(1234);
@@ -13,7 +19,7 @@ describe('RustPlusWrapper', () => {
     });
 
     it('should use the default port if one is not provided', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
 
       expect(wrapper.serverPort).toBe(28082);
     });
@@ -22,7 +28,7 @@ describe('RustPlusWrapper', () => {
   describe('connect', () => {
     it('should create a new RustPlus client and connect', () => {
       const rustPlusConnectSpy = jest.spyOn(RustPlus.prototype, 'connect').mockImplementation(() => {});
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
 
       wrapper.connect();
 
@@ -32,13 +38,13 @@ describe('RustPlusWrapper', () => {
 
   describe('getEntityInfo', () => {
     it('should throw an error if the client is not connected', async () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
 
       await expect(wrapper.getEntityInfo('entityId')).rejects.toThrow('Failed to get entity info. Client not connected.');
     });
 
     it('should return the entity info', async () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
       const expectedEntityInfo: EntityInfo ={ payload: { items: [] }, type: EntityType.Switch };
       jest.spyOn(RustPlus.prototype, 'connect').mockImplementation(() => {});
       jest.spyOn(RustPlus.prototype, 'getEntityInfo').mockImplementation((entId: string, callback) => {
@@ -54,13 +60,13 @@ describe('RustPlusWrapper', () => {
 
   describe('toggleSmartSwitch', () => {
     it('should throw an error if the client is not connected', async () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
 
       await expect(wrapper.toggleSmartSwitch('entityId', true)).rejects.toThrow('Failed to toggle smart switch. Client not connected.');
     });
 
     it('should reject with an error if the request times out', async () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
       jest.spyOn(RustPlus.prototype, 'connect').mockImplementation(() => {});
       jest.spyOn(RustPlus.prototype, 'turnSmartSwitchOn').mockImplementation(() => {});
 
@@ -71,7 +77,7 @@ describe('RustPlusWrapper', () => {
 
     describe('on', () => {
       it('should resolve with the message if the request is successful', async () => {
-        const wrapper = new RustPlusWrapper('localhost', 'token');
+        wrapper = new RustPlusWrapper('localhost', 'token');
         const expectedMessage = { response: { entityInfo: { payload: { items: [] }, type: EntityType.Switch } } };
         jest.spyOn(RustPlus.prototype, 'connect').mockImplementation(() => {});
         jest.spyOn(RustPlus.prototype, 'turnSmartSwitchOn').mockImplementation((entId: string, callback) => {
@@ -84,7 +90,7 @@ describe('RustPlusWrapper', () => {
       });
 
       it('should reject with the message if the request is unsuccessful', async () => {
-        const wrapper = new RustPlusWrapper('localhost', 'token');
+        wrapper = new RustPlusWrapper('localhost', 'token');
         const expectedMessage = { response: { error: { error: 'Error message' } } };
         jest.spyOn(RustPlus.prototype, 'connect').mockImplementation(() => {});
         jest.spyOn(RustPlus.prototype, 'turnSmartSwitchOn').mockImplementation((entId: string, callback) => {
@@ -99,7 +105,7 @@ describe('RustPlusWrapper', () => {
 
     describe('off', () => {
       it('should resolve with the message if the request is successful', async () => {
-        const wrapper = new RustPlusWrapper('localhost', 'token');
+        wrapper = new RustPlusWrapper('localhost', 'token');
         const expectedMessage = { response: { entityInfo: { payload: { items: [] }, type: EntityType.Switch } } };
         jest.spyOn(RustPlus.prototype, 'connect').mockImplementation(() => {});
         jest.spyOn(RustPlus.prototype, 'turnSmartSwitchOff').mockImplementation((entId: string, callback) => {
@@ -112,7 +118,7 @@ describe('RustPlusWrapper', () => {
       });
 
       it('should reject with the message if the request is unsuccessful', async () => {
-        const wrapper = new RustPlusWrapper('localhost', 'token');
+        wrapper = new RustPlusWrapper('localhost', 'token');
         const expectedMessage = { response: { error: { error: 'Error message' } } };
         jest.spyOn(RustPlus.prototype, 'connect').mockImplementation(() => {});
         jest.spyOn(RustPlus.prototype, 'turnSmartSwitchOff').mockImplementation((entId: string, callback) => {
@@ -126,31 +132,9 @@ describe('RustPlusWrapper', () => {
     });
   });
 
-  describe('onEntityChange', () => {
-    it('should add the callback to the entityChangeCallbacks array', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
-      const callback = jest.fn();
-
-      wrapper.onEntityChange(callback);
-
-      expect(wrapper['entityChangeCallbacks']).toContain(callback);
-    });
-  });
-
-  describe('onConnected', () => {
-    it('should add the callback to the connectedCallbacks array', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
-      const callback = jest.fn();
-
-      wrapper.onConnected(callback);
-
-      expect(wrapper['connectedCallbacks']).toContain(callback);
-    });
-  });
-
   describe('hasClient', () => {
     it('should return true if the client is connected', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
 
       wrapper.connect();
 
@@ -158,7 +142,7 @@ describe('RustPlusWrapper', () => {
     });
 
     it('should return false if the client is not connected', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
 
       expect(wrapper.hasClient()).toBe(false);
     });
@@ -166,60 +150,40 @@ describe('RustPlusWrapper', () => {
 
   describe('registerListeners', () => {
     it('should register a connected listener', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
-      const onSpy = jest.spyOn(RustPlus.prototype, 'on').mockImplementation(() => {});
+      wrapper = new RustPlusWrapper('localhost', 'token');
+      const onSpy = jest.spyOn(RustPlus.prototype, 'on');
       wrapper.connect();
 
       wrapper['registerListeners']();
 
-      expect(onSpy).toHaveBeenCalledWith('connected', wrapper['callConnectedCallbacks']);
+      expect(onSpy).toHaveBeenCalledWith('connected', expect.any(Function));
     });
 
     it('should register a message listener', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
-      const onSpy = jest.spyOn(RustPlus.prototype, 'on').mockImplementation(() => {});
+      wrapper = new RustPlusWrapper('localhost', 'token');
+      const onSpy = jest.spyOn(RustPlus.prototype, 'on');
       wrapper.connect();
 
       wrapper['registerListeners']();
 
-      expect(onSpy).toHaveBeenCalledWith('message', wrapper['callEntityChangeCallbacks']);
+      expect(onSpy).toHaveBeenCalledWith('message', expect.any(Function));
     });
-  });
 
-  describe('callConnectedCallbacks', () => {
-    it('should call all connectedCallbacks', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
-      wrapper.onConnected(callback1);
-      wrapper.onConnected(callback2);
+    it('should emit a connected event when the client connects', () => {
+      wrapper = new RustPlusWrapper('localhost', 'token');
+      const emitSpy = jest.spyOn(wrapper, 'emit');
+      wrapper.connect();
 
-      wrapper['callConnectedCallbacks']();
+      wrapper['registerListeners']();
+      wrapper['client'].emit('connected');
 
-      expect(callback1).toHaveBeenCalled();
-      expect(callback2).toHaveBeenCalled();
-    });
-  });
-
-  describe('callEntityChangeCallbacks', () => {
-    it('should call all entityChangeCallbacks', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
-      wrapper.onEntityChange(callback1);
-      wrapper.onEntityChange(callback2);
-      const message = { broadcast: { entityChanged: {} } } as Message;
-
-      wrapper['callEntityChangeCallbacks'](message);
-
-      expect(callback1).toHaveBeenCalledWith({});
-      expect(callback2).toHaveBeenCalledWith({});
+      expect(emitSpy).toHaveBeenCalledWith(RustPlusEvents.Connected);
     });
   });
 
   describe('getErrorMessage', () => {
     it('should return the error message if one exists', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
       const message = { response: { error: { error: 'Error message' } } } as Message;
 
       const error = wrapper['getErrorMessage'](message);
@@ -228,7 +192,7 @@ describe('RustPlusWrapper', () => {
     });
 
     it('should format the error message when it is not_found', () => {
-      const wrapper = new RustPlusWrapper('localhost', 'token');
+      wrapper = new RustPlusWrapper('localhost', 'token');
       const message = { response: { error: { error: 'not_found' } } } as Message;
       const expectedError = 'Entity not found';
 

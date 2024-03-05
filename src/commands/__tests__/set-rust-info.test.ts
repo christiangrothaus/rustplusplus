@@ -8,7 +8,7 @@ describe('execute', () => {
         getString: jest.fn().mockReturnValue(undefined),
         getNumber: jest.fn()
       },
-      reply: jest.fn()
+      reply: jest.fn().mockImplementation(() => Promise.resolve())
     };
 
     // @ts-expect-error - This is a mock
@@ -23,7 +23,7 @@ describe('execute', () => {
         getString: jest.fn().mockReturnValue('localhost'),
         getNumber: jest.fn().mockReturnValue(0)
       },
-      reply: jest.fn()
+      reply: jest.fn().mockImplementation(() => Promise.resolve())
     };
 
     // @ts-expect-error - This is a mock
@@ -38,7 +38,7 @@ describe('execute', () => {
         getString: jest.fn().mockReturnValue('localhost'),
         getNumber: jest.fn().mockReturnValue(65469)
       },
-      reply: jest.fn()
+      reply: jest.fn().mockImplementation(() => Promise.resolve())
     };
 
     // @ts-expect-error - This is a mock
@@ -53,7 +53,8 @@ describe('execute', () => {
         getString: jest.fn().mockReturnValue('localhost'),
         getNumber: jest.fn().mockReturnValue(400)
       },
-      reply: jest.fn()
+      reply: jest.fn().mockImplementation(() => Promise.resolve()),
+      deleteReply: jest.fn().mockImplementation(() => Promise.resolve())
     };
     const discordManager = {
       state: {
@@ -74,7 +75,8 @@ describe('execute', () => {
         getString: jest.fn().mockReturnValue('localhost'),
         getNumber: jest.fn().mockReturnValue(400)
       },
-      reply: jest.fn()
+      reply: jest.fn().mockImplementation(() => Promise.resolve()),
+      deleteReply: jest.fn().mockImplementation(() => Promise.resolve())
     };
     const discordManager = {
       state: {
@@ -87,27 +89,6 @@ describe('execute', () => {
     execute(interaction as Interaction, discordManager);
 
     expect(discordManager.state.rustServerHost).toBe('localhost');
-  });
-
-  it('should restart the discordManager', () => {
-    const interaction = {
-      options: {
-        getString: jest.fn().mockReturnValue('localhost'),
-        getNumber: jest.fn().mockReturnValue(400)
-      },
-      reply: jest.fn()
-    };
-    const discordManager = {
-      state: {
-        rustServerHost: ''
-      },
-      restart: jest.fn()
-    };
-
-    // @ts-expect-error - This is a mock
-    execute(interaction as Interaction, discordManager);
-
-    expect(discordManager.restart).toHaveBeenCalled();
   });
 });
 

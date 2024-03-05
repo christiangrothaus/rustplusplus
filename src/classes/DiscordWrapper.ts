@@ -10,80 +10,57 @@ import {
   GatewayIntentBits,
   Guild,
   Interaction,
+  Message,
   ModalSubmitInteraction,
   PermissionsBitField,
   TextChannel
 } from 'discord.js';
 import CommandManager from './CommandManager';
-import SmartSwitchMessage from './messages/SmartSwitchMessage';
-import SmartSwitchEntityInfo from './entityInfo/SmartSwitchEntityInfo';
-import SmartAlarmMessage from './messages/SmartAlarmMessage';
-import SmartAlarmEntityInfo from './entityInfo/SmartAlarmEntityInfo';
-import StorageMonitorMessage from './messages/StorageMonitorMessage';
-import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
-import State from './State';
+import { EventEmitter } from 'events';
+import BaseEntity from './entities/BaseEntity';
+import BaseEntityInfo from './entityInfo/BaseEntityInfo';
 
 const notificationChannelCreateOptions: CategoryCreateChannelOptions = {
   name: 'Notifications',
   type: ChannelType.GuildText
 };
 
-const switchChannelCreateOptions: CategoryCreateChannelOptions = {
-  name: 'Switches',
+const pairedDevicesChannelCreateOptions: CategoryCreateChannelOptions = {
+  name: 'Paired Devices',
   type: ChannelType.GuildText
 };
 
-export type RustChannels = {
-  switchChannel: TextChannel,
-  notificationChannel : TextChannel
-};
+export enum InteractionCreateEvents {
+  Button = 'Button',
+  ModalSubmit = 'ModalSubmit',
+  ChatInputCommand = 'ChatInputCommand'
+}
 
-export type ChannelReadyCallbacks = (channels: RustChannels) => void;
-export default class DiscordWrapper {
+declare interface DiscordWrapper {
+  on(event: InteractionCreateEvents.Button, listener: (interaction: ButtonInteraction) => void): this;
+  on(event: InteractionCreateEvents.ModalSubmit, listener: (interaction: ModalSubmitInteraction) => void): this;
+  on(event: InteractionCreateEvents.ChatInputCommand, listener: (interaction: ChatInputCommandInteraction) => void): this;
+}
+
+class DiscordWrapper extends EventEmitter {
   client: Client;
 
   commandManager: CommandManager;
 
-  state: State;
+  private notificationsChannel: TextChannel;
 
-  set notificationChannel(channel: TextChannel) {
-    this._notificationChannel = channel;
-    this.callChannelsReadyCallbacks();
-  }
+  private pairedDevicesChannel: TextChannel;
 
-  get notificationChannel(): TextChannel {
-    return this._notificationChannel;
-  }
-
-  set switchChannel(channel: TextChannel) {
-    this._switchChannel = channel;
-    this.callChannelsReadyCallbacks();
-  }
-
-  get switchChannel(): TextChannel {
-    return this._switchChannel;
-  }
-
-  private modalSubmitCallbacks: Array<(interaction: ModalSubmitInteraction) => void> = [];
-
-  private chatInputCommandCallbacks: Array<(interaction: ChatInputCommandInteraction) => void> = [];
-
-  private buttonCallbacks: Array<(interaction: ButtonInteraction) => void> = [];
-
-  private channelsReadyCallbacks: Array<ChannelReadyCallbacks> = [];
-
-  private _notificationChannel: TextChannel;
-
-  private _switchChannel: TextChannel;
-
-  constructor(state: State) {
+  constructor() {
+    super();
     this.client = new Client({ intents: [ GatewayIntentBits.Guilds ] });
-    this.state = state;
   }
 
   public async start() {
     this.registerListeners();
     await this.client.login(process.env.DISCORD_TOKEN);
+    const guilds = await this.client.guilds.fetch();
+    this.createChannels(await guilds.first().fetch());
   }
 
   public async destroy() {
@@ -91,78 +68,39 @@ export default class DiscordWrapper {
     await this.client.destroy();
   }
 
-  public onButtonInteraction(callback: (interaction: ButtonInteraction) => void) {
-    this.buttonCallbacks.push(callback);
+  public async sendPairedDeviceMessage(entity: BaseEntity<BaseEntityInfo>) {
+    await this.pairedDevicesChannel.send(entity);
   }
 
-  public onModalSubmitInteraction(callback: (interaction: ModalSubmitInteraction) => void) {
-    this.modalSubmitCallbacks.push(callback);
+  public async getPairedDeviceMessage(entityId: string): Promise<Message<boolean>> {
+    const pairedDeviceMessages = await this.pairedDevicesChannel.messages.fetch();
+
+    const discordMessage = pairedDeviceMessages.find((message) => {
+      message.embeds[0].footer.text === entityId;
+    });
+
+    return discordMessage;
   }
 
-  public onChatInputCommandInteraction(callback: (interaction: ChatInputCommandInteraction) => void) {
-    this.chatInputCommandCallbacks.push(callback);
-  }
-
-  public async sendSwitchMessage(entityInfo: SmartSwitchEntityInfo) {
-    const switchMessage = new SmartSwitchMessage(this.switchChannel, entityInfo);
-    await switchMessage.send();
-    this.state.messages.set(switchMessage.entityInfo.entityId, switchMessage);
-  }
-
-  public async sendAlarmMessage(entityInfo: SmartAlarmEntityInfo) {
-    const alarmMessage = new SmartAlarmMessage(this.notificationChannel, entityInfo);
-    await alarmMessage.send();
-    this.state.messages.set(alarmMessage.entityInfo.entityId, alarmMessage);
-  }
-
-  public async sendStorageMessage(entityInfo: StorageMonitorEntityInfo) {
-    const storageMessage = new StorageMonitorMessage(this.notificationChannel, entityInfo);
-    await storageMessage.send();
-    this.state.messages.set(storageMessage.entityInfo.entityId, storageMessage);
-  }
-
-  public async updateMessage(entityId: string, entityInfo: Partial<SmartAlarmEntityInfo | SmartSwitchEntityInfo | StorageMonitorEntityInfo>) {
-    const switchMessage = this.state.messages.get(entityId);
-    switchMessage.update(entityInfo);
-  }
-
-  public async deleteMessage(entityId: string) {
-    const savedMessage = this.state.messages.get(entityId);
-    if (savedMessage?.message) {
-      await savedMessage.message.delete();
-    }
-    this.state.messages.delete(entityId);
-  }
-
-  public onChannelsReady(callback: (channel: RustChannels) => void) {
-    if (this.switchChannel && this.notificationChannel) {
-      callback({ switchChannel: this.switchChannel, notificationChannel: this.notificationChannel });
-    } else {
-      this.channelsReadyCallbacks.push(callback);
-    }
-  }
-
-  private async createChannels(guildId: string) {
-    const guild = await this.client.guilds.fetch(guildId);
-
+  private async createChannels(guild: Guild) {
     const channels = await guild.channels.fetch();
 
-    const existingCategory = <CategoryChannel> channels.find((channel) => channel.name === 'Rust++' && channel.type === ChannelType.GuildCategory);
+    const existingCategory = channels.find((channel) => channel.name.toLowerCase() === 'rust++' && channel.type === ChannelType.GuildCategory) as CategoryChannel;
 
     if (existingCategory) {
       existingCategory.children.cache.forEach((channel) => {
         if (channel.name.toLowerCase() === 'notifications') {
-          this.notificationChannel = <TextChannel> channel;
-        } else if (channel.name.toLowerCase() === 'switches') {
-          this.switchChannel = <TextChannel> channel;
+          this.notificationsChannel = channel as TextChannel;
+        } else if (channel.name.toLowerCase() === 'paired devices') {
+          this.pairedDevicesChannel = channel as TextChannel;
         }
       });
 
-      if (!this.notificationChannel) {
-        this.notificationChannel = await existingCategory.children.create(notificationChannelCreateOptions);
+      if (!this.notificationsChannel) {
+        this.notificationsChannel = await existingCategory.children.create(notificationChannelCreateOptions);
       }
-      if (!this.switchChannel) {
-        this.switchChannel = await existingCategory.children.create(switchChannelCreateOptions);
+      if (!this.pairedDevicesChannel) {
+        this.pairedDevicesChannel = await existingCategory.children.create(pairedDevicesChannelCreateOptions);
       }
     } else {
       const channelCategory = await guild.channels.create({
@@ -178,49 +116,32 @@ export default class DiscordWrapper {
         }]
       });
 
-      this.notificationChannel = await channelCategory.children.create(notificationChannelCreateOptions);
+      this.notificationsChannel = await channelCategory.children.create(notificationChannelCreateOptions);
 
-      this.switchChannel = await channelCategory.children.create(switchChannelCreateOptions);
+      this.pairedDevicesChannel = await channelCategory.children.create(pairedDevicesChannelCreateOptions);
     }
   }
 
-  private async onClientReady(client: Client) {
-    const guilds = await client.guilds.fetch();
-    guilds.forEach((guild) => {
-      this.createChannels(guild.id);
-      this.commandManager = new CommandManager(guild.id);
-      this.commandManager.loadCommands();
-    });
-  }
-
   private onGuildJoin(guild: Guild) {
-    this.createChannels(guild.id);
+    this.createChannels(guild);
     this.commandManager = new CommandManager(guild.id);
     this.commandManager.loadCommands();
   }
 
   private onInteractionCreate(interaction: Interaction) {
     if (interaction.isButton()) {
-      this.buttonCallbacks.forEach((callback) => callback(interaction as ButtonInteraction));
+      this.emit(InteractionCreateEvents.Button, interaction as ButtonInteraction);
     } else if (interaction.isModalSubmit()) {
-      this.modalSubmitCallbacks.forEach((callback) => callback(interaction as ModalSubmitInteraction));
+      this.emit(InteractionCreateEvents.ModalSubmit, interaction as ModalSubmitInteraction);
     } else if (interaction.isChatInputCommand()) {
-      this.chatInputCommandCallbacks.forEach((callback) => callback(interaction as ChatInputCommandInteraction));
+      this.emit(InteractionCreateEvents.ChatInputCommand, interaction as ChatInputCommandInteraction);
     }
   }
 
   private registerListeners() {
-    this.client.once(Events.ClientReady, (client) => { this.onClientReady(client); });
-
     this.client.once(Events.GuildCreate, (guild) => { this.onGuildJoin(guild); });
-
     this.client.on(Events.InteractionCreate, (interaction) => { this.onInteractionCreate(interaction); });
   }
-
-  private callChannelsReadyCallbacks() {
-    if (this.switchChannel && this.notificationChannel) {
-      this.channelsReadyCallbacks.forEach((callback) => callback({ switchChannel: this.switchChannel, notificationChannel: this.notificationChannel }));
-      this.channelsReadyCallbacks = [];
-    }
-  }
 }
+
+export default DiscordWrapper;

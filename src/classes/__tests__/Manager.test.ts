@@ -1,55 +1,25 @@
-import { Awaitable, Events, Interaction, ModalBuilder, TextChannel } from 'discord.js';
-import Manager from '../Manager';
+import {
+  Awaitable,
+  CategoryCreateChannelOptions,
+  ChannelType,
+  Collection,
+  Events,
+  Guild,
+  GuildChannelCreateOptions,
+  Interaction,
+  ModalBuilder,
+  OAuth2Guild,
+  Role
+} from 'discord.js';
+import Manager, { ENV_FILE_PATH } from '../Manager';
 import CommandManager from '../CommandManager';
-import SmartSwitchMessage from '../messages/SmartSwitchMessage';
-import SmartSwitchEntityInfo from '../entityInfo/SmartSwitchEntityInfo';
-import { EntityChanged } from '../../models/RustPlus.models';
-import { PushNotificationBody } from '../PushListener';
-
-jest.mock('../State', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      loadFromSave: jest.fn().mockResolvedValue({}),
-      save: jest.fn().mockResolvedValue({}),
-      onChannelIdChange: jest.fn(),
-      createMessageFromData: jest.fn(),
-      messages: {},
-      rustServerHost: 'localhost'
-    };
-  });
-});
-
-jest.mock('../RustPlusWrapper', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      onConnected: jest.fn(),
-      onEntityChange: jest.fn(),
-      connect: jest.fn(),
-      hasClient: jest.fn().mockReturnValue(true),
-      toggleSmartSwitch: jest.fn(),
-      getEntityInfo: jest.fn().mockResolvedValue({})
-    };
-  });
-});
-
-jest.mock('../PushListener', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      onEntityPush: jest.fn(),
-      start: jest.fn(),
-      destroy: jest.fn(),
-      loadConfig: jest.fn()
-    };
-  });
-});
-
-jest.mock('../PushRegister', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      fcmRegister: jest.fn()
-    };
-  });
-});
+import SwitchEntityInfo from '../entityInfo/SwitchEntityInfo';
+import { CONFIG_FILE } from '../PushListener';
+import Switch from '../entities/Switch';
+import Alarm from '../entities/Alarm';
+import StorageMonitor from '../entities/StorageMonitor';
+import RustPlusWrapper from '../RustPlusWrapper';
+import { SAVE_DATA_PATH } from '../State';
 
 jest.mock('prompt-sync', () => {
   return jest.fn().mockImplementation(() => {
@@ -57,27 +27,50 @@ jest.mock('prompt-sync', () => {
   });
 });
 
-jest.mock('../DiscordWrapper', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      onButtonInteraction: jest.fn(),
-      onModalSubmitInteraction: jest.fn(),
-      onChatInputCommandInteraction: jest.fn(),
-      start: jest.fn().mockResolvedValue({}),
-      destroy: jest.fn(),
-      deleteMessage: jest.fn(),
-      updateMessage: jest.fn(),
-      onGuildJoin: jest.fn(),
-      onChannelsReady: jest.fn()
-    };
-  });
-});
+const mockGuild = {
+  roles: {
+    everyone: {} as Role
+  },
+  channels: {
+    fetch: jest.fn().mockResolvedValue([]),
+    create: jest.fn().mockImplementation((options: GuildChannelCreateOptions & { type: ChannelType.GuildCategory }) => {
+      return {
+        name: options.name,
+        type: options.type,
+        children: {
+          create: jest.fn().mockImplementation((options: CategoryCreateChannelOptions) => {
+            return {
+              name: options.name,
+              type: options.type
+            };
+          })
+        }
+      };
+    })
+  }
+};
+const mockOAuth2Guilds = new Collection<string, OAuth2Guild>();
+// @ts-expect-error - mocking guild
+mockOAuth2Guilds.set('guildId', {
+  id: 'guildId',
+  fetch: jest.fn().mockImplementation(() => {
+    return mockGuild;
+  })
+} as OAuth2Guild);
 
 jest.mock('discord.js', () => {
   return {
     ...jest.requireActual('discord.js'),
     Client: jest.fn().mockImplementation(() => {
       return {
+        removeAllListeners: jest.fn(),
+        destroy: jest.fn().mockResolvedValue(undefined),
+        guilds: {
+          fetch: jest.fn().mockResolvedValue(mockOAuth2Guilds)
+        },
+        user: {
+          id: 'botId'
+        },
         channels: {
           fetch: jest.fn().mockResolvedValue({
             send: jest.fn().mockResolvedValue({
@@ -89,41 +82,71 @@ jest.mock('discord.js', () => {
           })
         },
         once: jest.fn((event: Events, cb: (obj: { [key: string]: any }) => Awaitable<void>): void => {
-          cb({
-            user: { tag: 'user#1234' },
-            id: '1234567890'
-          });
-          return;
+          switch (event) {
+            case Events.GuildCreate: {
+              // @ts-expect-error - mocking guild
+              const guild = {
+                id: 'guildId',
+                roles: {
+                  everyone: {} as Role
+                },
+                channels: {
+                  fetch: jest.fn().mockResolvedValue([]),
+                  create: jest.fn().mockImplementation((options: GuildChannelCreateOptions & { type: ChannelType.GuildCategory }) => {
+                    return {
+                      name: options.name,
+                      type: options.type,
+                      children: {
+                        create: jest.fn().mockImplementation((options: CategoryCreateChannelOptions) => {
+                          return {
+                            name: options.name,
+                            type: options.type
+                          };
+                        })
+                      }
+                    };
+                  })
+                }
+              } as Guild;
+              cb(guild);
+              break;
+            }
+          }
         }),
         on: jest.fn((event: Events, cb: (interaction: { [key: string]: any }) => Awaitable<void>): void => {
-          const isModalSubmit = jest.fn(() => false);
-          const isButton = jest.fn(() => true);
-          const isChatInputCommand = jest.fn(() => false);
-          const followUp = jest.fn().mockResolvedValue({});
-          const reply = jest.fn().mockResolvedValue({});
-          const editReply = jest.fn().mockResolvedValue({});
-          const deferReply = jest.fn().mockResolvedValue({});
-          const interaction = {
-            isModalSubmit,
-            isButton,
-            isChatInputCommand,
-            replied: false,
-            defered: false,
-            followUp,
-            reply,
-            commandName: 'commandName',
-            message: {
-              delete: jest.fn().mockResolvedValue({}),
-              embeds: [
-                { title: 'embedTitle' }
-              ]
-            },
-            editReply,
-            deferReply,
-            customId: 'customId-action'
-          };
-          cb(interaction);
-          return;
+          switch (event) {
+            case Events.InteractionCreate: {
+              const isModalSubmit = jest.fn(() => false);
+              const isButton = jest.fn(() => true);
+              const isChatInputCommand = jest.fn(() => false);
+              const followUp = jest.fn().mockResolvedValue({});
+              const reply = jest.fn().mockResolvedValue({});
+              const editReply = jest.fn().mockResolvedValue({});
+              const deferReply = jest.fn().mockResolvedValue({});
+              // @ts-expect-error - mocking interaction
+              const interaction = {
+                isModalSubmit,
+                isButton,
+                isChatInputCommand,
+                replied: false,
+                defered: false,
+                followUp,
+                reply,
+                commandName: 'commandName',
+                message: {
+                  delete: jest.fn().mockResolvedValue({}),
+                  embeds: [
+                    { title: 'embedTitle' }
+                  ]
+                },
+                editReply,
+                deferReply,
+                customId: 'customId-action'
+              } as Interaction;
+              cb(interaction);
+              break;
+            }
+          }
         }),
         login: jest.fn().mockResolvedValue('')
       };
@@ -139,17 +162,101 @@ jest.mock('discord.js', () => {
   };
 });
 
+jest.mock('@liamcottle/rustplus.js', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      connect: jest.fn(),
+      removeAllListeners: jest.fn(),
+      disconnect: jest.fn(),
+      getEntityInfo: jest.fn(),
+      turnSmartSwitchOn: jest.fn(),
+      turnSmartSwitchOff: jest.fn(),
+      on: jest.fn(),
+      getTime: jest.fn()
+    };
+  });
+});
+
+jest.mock('dotenv', () => {
+  return {
+    ...jest.requireActual('dotenv'),
+    config: jest.fn().mockImplementation(() => {
+      process.env = {
+        DISCORD_TOKEN: 'discordToken',
+        APPLICATION_ID: 'applicationId',
+        STEAM_ID: 'steamId'
+      };
+    })
+  };
+});
+
+jest.mock('fs', () => {
+  return {
+    ...jest.requireActual('fs'),
+    readFileSync: jest.fn().mockImplementation((path: string) => {
+      switch (path) {
+        case SAVE_DATA_PATH: {
+          return JSON.stringify({
+            rustServerHost: 'localhost',
+            rustServerPort: 28082,
+            rustToken: '123456',
+            pushIds: [],
+            pairedSwitches: [],
+            pairedAlarms: [],
+            pairedStorageMonitors: []
+          });
+        }
+        case CONFIG_FILE: {
+          return JSON.stringify({
+            fcm_credentials: {
+              keys: {
+                privateKey: 'privateKey',
+                publicKey: 'publicKey',
+                authSecret: 'keyAuthSecret'
+              },
+              fcm: {
+                token: 'fcmToken',
+                pushSet: 'pushSet'
+              },
+              gcm: {
+                token: 'gcmToken',
+                androidId: 'gcmAndroidId',
+                securityToken: 'gcmSecurityToken',
+                appId: 'gcmAppId'
+              }
+            },
+            expo_push_token: 'expoPushToken',
+            rustplus_auth_token: 'rustPlusAuthToken'
+          });
+        }
+        case ENV_FILE_PATH: {
+          return `DISCORD_TOKEN=discordToken
+          APPLICATION_ID=applicationId
+          STEAM_ID=steamId`;
+        }
+      }
+    }),
+    writeFileSync: jest.fn().mockImplementation(() => {})
+  };
+});
+
 describe('DiscordManager', () => {
+  let discordManager: Manager;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.restoreAllMocks();
     jest.spyOn(Date, 'now').mockReturnValue(0);
-    jest.spyOn(process, 'exit').mockImplementation(() => { throw new Error('process.exit() was called'); });
+    jest.spyOn(process, 'exit').mockImplementation(() => {return [] as never;});
+  });
+
+  afterEach(() => {
+    discordManager.destroy();
   });
 
   describe('ctor', () => {
     it('should create a new instance of DiscordManager', () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
 
       expect(discordManager).toBeInstanceOf(Manager);
     });
@@ -157,18 +264,18 @@ describe('DiscordManager', () => {
 
   describe('destroy', () => {
     it('should save the state', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       await discordManager.start();
+      const stateSaveSpy = jest.spyOn(discordManager.state, 'save');
 
-      expect(() => {
-        discordManager.destroy();
-      }).toThrow();
+      discordManager.destroy();
 
-      expect(discordManager.state.save).toHaveBeenCalled();
+      expect(stateSaveSpy).toHaveBeenCalled();
     });
 
     it('should exit the process', async () => {
-      const discordManager = new Manager();
+      jest.spyOn(process, 'exit').mockImplementationOnce(() => {throw new Error('process.exit() was called');});
+      discordManager = new Manager();
       await discordManager.start();
 
       expect(() => {
@@ -177,29 +284,27 @@ describe('DiscordManager', () => {
     });
 
     it('should destroy the push listener if there is one', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       await discordManager.start();
+      const pushListenerDestroySpy = jest.spyOn(discordManager.pushListener, 'destroy');
 
-      expect(() => {
-        discordManager.destroy();
-      }).toThrow();
+      discordManager.destroy();
 
-      expect(discordManager.pushListener.destroy).toHaveBeenCalled();
+      expect(pushListenerDestroySpy).toHaveBeenCalled();
     });
   });
 
   describe('restart', () => {
     it('should save the state, call destory, and call start', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       await discordManager.start();
-
       const startSpy = jest.spyOn(discordManager, 'start');
       const destroySpy = jest.spyOn(discordManager, 'destroy');
-      jest.spyOn(process, 'exit').mockImplementation(() => {return [] as never;});
+      const stateSaveSpy = jest.spyOn(discordManager.state, 'save');
 
       discordManager.restart();
 
-      expect(discordManager.state.save).toHaveBeenCalled();
+      expect(stateSaveSpy).toHaveBeenCalled();
       expect(startSpy).toHaveBeenCalled();
       expect(destroySpy).toHaveBeenCalled();
     });
@@ -207,7 +312,7 @@ describe('DiscordManager', () => {
 
   describe('initializeDiscord', () => {
     it('should call start on the discord client', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       // @ts-expect-error - mocking discordClient
       discordManager.discordClient = {
         start: jest.fn()
@@ -221,16 +326,17 @@ describe('DiscordManager', () => {
 
   describe('initializeRustPlus', () => {
     it('should create a new RustPlusWrapper and call connect if there is a server host', () => {
-      const discordManager = new Manager();
-      discordManager['state'].rustServerHost = 'rustServerHost';
+      discordManager = new Manager();
+      discordManager.state.rustServerHost = 'rustServerHost';
+      const rustPlusConnectSpy = jest.spyOn(RustPlusWrapper.prototype, 'connect');
 
       discordManager['initializeRustPlus']();
 
-      expect(discordManager.rustPlus.connect).toHaveBeenCalled();
+      expect(rustPlusConnectSpy).toHaveBeenCalled();
     });
 
     it('should throw an error if there is no server host', () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       discordManager['state'].rustServerHost = undefined;
 
       expect(() => discordManager['initializeRustPlus']()).toThrow('No rust server host found in state.');
@@ -239,26 +345,87 @@ describe('DiscordManager', () => {
 
   describe('onButtonInteraction', () => {
     describe('delete action', () => {
-      it('should delete the message', async () => {
-        const discordManager = new Manager();
+      describe('pairedSwitch', () => {
+        it('should delete the message', async () => {
+          discordManager = new Manager();
+          await discordManager.start();
+          const interaction = {
+            customId: 'entityId-delete',
+            message: {
+              embeds: [{ footer: { text: 'entityId' } }],
+              delete: jest.fn()
+            }
+          };
+          discordManager.state.pairedSwitches.set('entityId', {} as Switch);
+
+          // @ts-expect-error - mocking interaction
+          await discordManager['onButtonInteraction'](interaction as Interaction);
+
+          expect(discordManager.state.pairedSwitches.get('entityId')).toBeUndefined();
+        });
+      });
+
+      describe('pairedAlarm', () => {
+        it('should delete the message', async () => {
+          discordManager = new Manager();
+          await discordManager.start();
+          const interaction = {
+            customId: 'entityId-delete',
+            message: {
+              embeds: [{ footer: { text: 'entityId' } }],
+              delete: jest.fn()
+            }
+          };
+          discordManager.state.pairedAlarms.set('entityId', {} as Alarm);
+
+          // @ts-expect-error - mocking interaction
+          await discordManager['onButtonInteraction'](interaction as Interaction);
+
+          expect(discordManager.state.pairedAlarms.get('entityId')).toBeUndefined();
+        });
+      });
+
+      describe('pairedStorageMonitor', () => {
+        it('should delete the message', async () => {
+          discordManager = new Manager();
+          await discordManager.start();
+          const interaction = {
+            customId: 'entityId-delete',
+            message: {
+              embeds: [{ footer: { text: 'entityId' } }],
+              delete: jest.fn()
+            }
+          };
+          discordManager.state.pairedStorageMonitors.set('entityId', {} as StorageMonitor);
+
+          // @ts-expect-error - mocking interaction
+          await discordManager['onButtonInteraction'](interaction as Interaction);
+
+          expect(discordManager.state.pairedStorageMonitors.get('entityId')).toBeUndefined();
+        });
+      });
+
+      it('should call delete on the interactions message', async () => {
+        discordManager = new Manager();
         await discordManager.start();
         const interaction = {
           customId: 'entityId-delete',
           message: {
-            embeds: [{ footer: { text: 'entityId' } }]
+            embeds: [{ footer: { text: 'entityId' } }],
+            delete: jest.fn()
           }
         };
 
         // @ts-expect-error - mocking interaction
         await discordManager['onButtonInteraction'](interaction as Interaction);
 
-        expect(discordManager.discordClient.deleteMessage).toHaveBeenCalled();
+        expect(interaction.message.delete).toHaveBeenCalled();
       });
     });
 
     describe('edit action', () => {
       it('should create a modal', async () => {
-        const discordManager = new Manager();
+        discordManager = new Manager();
         await discordManager.start();
         const interaction = {
           customId: 'entityId-edit',
@@ -275,7 +442,7 @@ describe('DiscordManager', () => {
       });
 
       it('should have a name input with the old name as the value', async () => {
-        const discordManager = new Manager();
+        discordManager = new Manager();
         await discordManager.start();
         const interaction = {
           customId: 'entityId-edit',
@@ -296,91 +463,71 @@ describe('DiscordManager', () => {
 
     describe('on/off action', () => {
       it('should call toggleSmartSwitch with true as the second argument when case is on', async () => {
-        const discordManager = new Manager();
+        discordManager = new Manager();
+        discordManager.state.rustServerHost = 'localhost';
         await discordManager.start();
         const interaction = {
           customId: 'entityId-on',
-          deferReply: jest.fn().mockResolvedValue({}),
-          editReply: jest.fn().mockResolvedValue({
-            deleteReply: jest.fn()
-          }),
+          deferUpdate: jest.fn().mockResolvedValue({}),
           message: {
             embeds: [{ title: 'entityName', footer: { text: 'entityId' } }]
           }
         };
+        const toggleSmartSwitchSpy = jest.spyOn(discordManager.rustPlus, 'toggleSmartSwitch');
 
         // @ts-expect-error - mocking interaction
         await discordManager['onButtonInteraction'](interaction as Interaction);
 
-        expect(discordManager.rustPlus.toggleSmartSwitch).toHaveBeenCalledWith('entityId', true);
+        expect(toggleSmartSwitchSpy).toHaveBeenCalledWith('entityId', true);
       });
 
       it('should call toggleSmartSwitch with false as the second argument when case is off', async () => {
-        const discordManager = new Manager();
+        discordManager = new Manager();
         await discordManager.start();
         const interaction = {
           customId: 'entityId-off',
-          deferReply: jest.fn().mockResolvedValue({}),
-          editReply: jest.fn().mockResolvedValue({
-            deleteReply: jest.fn()
-          }),
+          deferUpdate: jest.fn().mockResolvedValue({}),
           message: {
             embeds: [{ title: 'entityName', footer: { text: 'entityId' } }]
           }
         };
+        const toggleSmartSwitchSpy = jest.spyOn(discordManager.rustPlus, 'toggleSmartSwitch');
 
         // @ts-expect-error - mocking interaction
         await discordManager['onButtonInteraction'](interaction as Interaction);
 
-        expect(discordManager.rustPlus.toggleSmartSwitch).toHaveBeenCalledWith('entityId', false);
-      });
-
-      it('should edit the reply with the error if it fails', async () => {
-        const discordManager = new Manager();
-        await discordManager.start();
-        discordManager.rustPlus.toggleSmartSwitch = jest.fn().mockRejectedValue('error');
-        const interaction = {
-          customId: 'entityId-on',
-          deferReply: jest.fn().mockResolvedValue({}),
-          editReply: jest.fn().mockResolvedValue({
-            deleteReply: jest.fn()
-          }),
-          message: {
-            embeds: [{ title: 'entityName', footer: { text: 'entityId' } }]
-          }
-        };
-
-        // @ts-expect-error - mocking interaction
-        await discordManager['onButtonInteraction'](interaction as Interaction);
-
-        expect(interaction.editReply).toHaveBeenCalledWith('error');
+        expect(toggleSmartSwitchSpy).toHaveBeenCalledWith('entityId', false);
       });
     });
   });
 
   describe('onModalSubmitInteraction', () => {
-    it('should call updateMessage with the entityId and the new name', async () => {
-      const discordManager = new Manager();
+    it('should edit the discord message and entity in state', async () => {
+      discordManager = new Manager();
       await discordManager.start();
       const interaction = {
         message: {
-          embeds: [{ footer: { text: 'entityId' } }]
+          embeds: [{ footer: { text: 'entityId' } }],
+          edit: jest.fn()
         },
         fields: {
           getTextInputValue: jest.fn().mockReturnValue('newName')
         }
       };
+      const switchEntity = new Switch(new SwitchEntityInfo('entityName', 'entityId', true));
+      discordManager.state.pairedSwitches.set('entityId', switchEntity);
 
       // @ts-expect-error - mocking interaction
       discordManager['onModalSubmitInteraction'](interaction as Interaction);
 
-      expect(discordManager.discordClient.updateMessage).toHaveBeenCalledWith('entityId', { name: 'newName' });
+      expect(discordManager.state.pairedSwitches.get('entityId').entityInfo.name).toBe('newName');
+      expect(interaction.message.edit).toHaveBeenCalledWith(discordManager.state.pairedSwitches.get('entityId'));
     });
   });
 
   describe('onChatInputCommandInteraction', () => {
     it('should throw an error if the command does not exist', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       await discordManager.start();
       discordManager.discordClient.commandManager = new CommandManager('123');
       const interaction = {
@@ -392,7 +539,7 @@ describe('DiscordManager', () => {
     });
 
     it('should call the command execute function', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       await discordManager.start();
       const command = {
         execute: jest.fn()
@@ -411,7 +558,7 @@ describe('DiscordManager', () => {
     });
 
     it('should call interaction followUp if the command fails and has been replied to', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       await discordManager.start();
       const command = {
         execute: jest.fn().mockRejectedValue('error')
@@ -432,7 +579,7 @@ describe('DiscordManager', () => {
     });
 
     it('should call interaction followUp if the command fails and has been replied to', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       await discordManager.start();
       const command = {
         execute: jest.fn().mockRejectedValue('error')
@@ -453,7 +600,7 @@ describe('DiscordManager', () => {
     });
 
     it('should call interaction reply if the command fails and has not been replied to or deferred', async () => {
-      const discordManager = new Manager();
+      discordManager = new Manager();
       await discordManager.start();
       const command = {
         execute: jest.fn().mockRejectedValue('error')
@@ -471,155 +618,5 @@ describe('DiscordManager', () => {
 
       expect(interaction.reply).toHaveBeenCalledWith({ content: 'There was an error while executing this command!', ephemeral: true });
     });
-  });
-
-  describe('registerDiscordListenersd', () => {
-    it('should call onButtonInteraction', async () => {
-      const discordManager = new Manager();
-      await discordManager.start();
-
-      expect(discordManager.discordClient.onButtonInteraction).toHaveBeenCalled();
-    });
-
-    it('should call onModalSubmitInteraction', async () => {
-      const discordManager = new Manager();
-      await discordManager.start();
-
-      expect(discordManager.discordClient.onModalSubmitInteraction).toHaveBeenCalled();
-    });
-
-    it('should call onChatInputCommandInteraction', async () => {
-      const discordManager = new Manager();
-      await discordManager.start();
-
-      expect(discordManager.discordClient.onChatInputCommandInteraction).toHaveBeenCalled();
-    });
-  });
-});
-
-describe('updateAllMessages', () => {
-  it('should call updateMessage for each message', async () => {
-    const discordManager = new Manager();
-    await discordManager.start();
-    discordManager['state'].messages = new Map([
-      ['entityId', new SmartSwitchMessage({} as TextChannel, new SmartSwitchEntityInfo('entityName', 'entityId', true))]
-    ]);
-    // @ts-expect-error - mocking getEntityInfo
-    jest.spyOn(discordManager.rustPlus, 'getEntityInfo').mockResolvedValue({ payload: { value: true, items: [] } });
-
-    await discordManager['updateAllMessages']();
-
-    expect(discordManager.discordClient.updateMessage).toHaveBeenCalledWith('entityId', { isActive: true });
-  });
-});
-
-describe('onRustPlusConnected', () => {
-  it('should call updateAllMessages', async () => {
-    const discordManager = new Manager();
-    await discordManager.start();
-    discordManager['updateAllMessages'] = jest.fn();
-
-    discordManager['onRustPlusConnected']();
-
-    expect(discordManager['updateAllMessages']).toHaveBeenCalled();
-  });
-});
-
-describe('onRustPlusEntityChange', () => {
-  it('should call updateMessage with the entityId and the entityInfo', async () => {
-    const discordManager = new Manager();
-    await discordManager.start();
-    // @ts-expect-error - mocking getEntityInfo
-    const entityChange = {
-      entityId: 'entityId',
-      payload: {
-        value: true
-      }
-    } as EntityChanged;
-
-    discordManager['onRustPlusEntityChange'](entityChange);
-
-    expect(discordManager.discordClient.updateMessage).toHaveBeenCalledWith('entityId', { isActive: true });
-  });
-});
-
-describe('registerRustPlusListeners', () => {
-  it('should call onConnected', async () => {
-    const discordManager = new Manager();
-    await discordManager.start();
-
-    expect(discordManager.rustPlus.onConnected).toHaveBeenCalledWith(discordManager['onRustPlusConnected']);
-  });
-
-  it('should call onEntityChange', async () => {
-    const discordManager = new Manager();
-    await discordManager.start();
-
-    expect(discordManager.rustPlus.onEntityChange).toHaveBeenCalledWith(discordManager['onRustPlusEntityChange']);
-  });
-});
-
-describe('createOnChannelsReady', () => {
-  it('should return a function that creates a new message', async () => {
-    const discordManager = new Manager();
-    await discordManager.start();
-    const pushNotif = {
-      entityId: 'entityId',
-      entityType: 'Switch',
-      name: 'entityName'
-    };
-
-    const onChannelsReady = discordManager['createOnChannelsReady'](pushNotif as PushNotificationBody);
-
-    const channels = {
-      switchChannel: {} as TextChannel,
-      notificationChannel: {} as TextChannel
-    };
-
-    onChannelsReady(channels);
-
-    expect(discordManager.state.createMessageFromData).toHaveBeenCalledWith(channels, { entityInfo: { entityId: 'entityId', entityType: 'Switch', name: 'entityName' } });
-  });
-});
-
-describe('onEntityPush', () => {
-  it('should call onChannelsReady', async () => {
-    const discordManager = new Manager();
-    await discordManager.start();
-    const pushNotif = {
-      entityId: 'entityId',
-      entityType: 'Switch',
-      name: 'entityName'
-    };
-
-    discordManager['onEntityPush'](pushNotif as PushNotificationBody);
-
-    expect(discordManager.discordClient.onChannelsReady).toHaveBeenCalled();
-  });
-});
-
-describe('registerPushListeners', () => {
-  it('should call onEntityPush', async () => {
-    const discordManager = new Manager();
-    await discordManager.start();
-
-    expect(discordManager.pushListener.onEntityPush).toHaveBeenCalledWith(discordManager['onEntityPush']);
-  });
-});
-
-describe('startRustPlusKeepAlive', () => {
-  it('should call setInterval with the correct arguments and save the interval id', () => {
-    jest.useFakeTimers();
-    const discordManager = new Manager();
-    discordManager['updateAllMessages'] = jest.fn();
-    const setIntervalSpy = jest.spyOn(global, 'setInterval');
-
-    discordManager['startRustPlusKeepAlive']();
-    jest.advanceTimersByTime(300000);
-
-    expect(discordManager['rustPlusKeepAliveId']).not.toBeUndefined();
-    expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 300000);
-    expect(discordManager['updateAllMessages']).toHaveBeenCalled();
-    jest.clearAllTimers();
   });
 });

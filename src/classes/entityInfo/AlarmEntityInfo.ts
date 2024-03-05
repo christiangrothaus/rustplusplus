@@ -1,7 +1,7 @@
 import { EntityType } from '../../models/RustPlus.models';
 import BaseEntityInfo from './BaseEntityInfo';
 
-export default class SmartAlarmEntityInfo extends BaseEntityInfo {
+export default class AlarmEntityInfo extends BaseEntityInfo {
 
   entityType: EntityType = EntityType.Alarm;
 

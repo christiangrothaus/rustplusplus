@@ -48,6 +48,7 @@ module.exports = {
     '@typescript-eslint/no-unsafe-argument': 'error',
     '@typescript-eslint/no-explicit-any': 'off',
     '@stylistic/js/no-multiple-empty-lines': ['error', { 'max': 1 }],
-    '@stylistic/js/object-curly-newline': ['error', { 'multiline': true, 'consistent': true }]
+    '@stylistic/js/object-curly-newline': ['error', { 'multiline': true, 'consistent': true }],
+    '@typescript-eslint/no-unsafe-declaration-merging': 'off'
   }
 };
