@@ -21,12 +21,12 @@ import BaseEntity from './entities/BaseEntity';
 import BaseEntityInfo from './entityInfo/BaseEntityInfo';
 
 const notificationChannelCreateOptions: CategoryCreateChannelOptions = {
-  name: 'Notifications',
+  name: 'notifications',
   type: ChannelType.GuildText
 };
 
 const pairedDevicesChannelCreateOptions: CategoryCreateChannelOptions = {
-  name: 'Paired Devices',
+  name: 'paired-devices',
   type: ChannelType.GuildText
 };
 
@@ -76,7 +76,7 @@ class DiscordWrapper extends EventEmitter {
     const pairedDeviceMessages = await this.pairedDevicesChannel.messages.fetch();
 
     const discordMessage = pairedDeviceMessages.find((message) => {
-      message.embeds[0].footer.text === entityId;
+      return message.embeds[0].footer.text === entityId;
     });
 
     return discordMessage;
@@ -91,7 +91,7 @@ class DiscordWrapper extends EventEmitter {
       existingCategory.children.cache.forEach((channel) => {
         if (channel.name.toLowerCase() === 'notifications') {
           this.notificationsChannel = channel as TextChannel;
-        } else if (channel.name.toLowerCase() === 'paired devices') {
+        } else if (channel.name.toLowerCase() === 'paired-devices') {
           this.pairedDevicesChannel = channel as TextChannel;
         }
       });

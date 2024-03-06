@@ -41,8 +41,6 @@ export default class Manager {
 
   pushListener: PushListener;
 
-  private rustPlusKeepAliveId: NodeJS.Timeout;
-
   async start(): Promise<void> {
     dotenv.config();
     this.setupEnv();
@@ -190,9 +188,10 @@ export default class Manager {
     const name = interaction.fields.getTextInputValue('name');
 
     const pairedDevice = this.state.getPairedDevice(entityId);
-    pairedDevice.entityInfo.name = name;
+    pairedDevice.updateEntityInfo({ name });
 
     interaction.message.edit(pairedDevice);
+    interaction.deferUpdate();
   }
 
   private async onChatInputCommandInteraction(interaction: ChatInputCommandInteraction) {
@@ -225,29 +224,34 @@ export default class Manager {
   private async onRustPlusEntityChange(entityChange: EntityChanged): Promise<void> {
     const entityId = `${entityChange.entityId}`;
 
-    const entityInfo = { isActive: entityChange.payload.value, capacity: entityChange.payload.capacity };
-
     const pairedDevice = this.state.getPairedDevice(entityId);
-    pairedDevice.entityInfo = { ...pairedDevice.entityInfo, ...entityInfo };
+
+    if (pairedDevice instanceof Switch) {
+      pairedDevice.updateEntityInfo({ isActive: entityChange?.payload.value });
+    } else if (pairedDevice instanceof StorageMonitor) {
+      pairedDevice.updateEntityInfo({ capacity: entityChange?.payload.capacity });
+    }
 
     const discordMessage = await this.discordClient.getPairedDeviceMessage(entityId);
     discordMessage.edit(pairedDevice);
   }
 
   private registerRustPlusListeners(): void {
-    this.rustPlus.on(RustPlusEvents.EntityChange, (entityChange) => { this.onRustPlusEntityChange(entityChange as EntityChanged); });
+    this.rustPlus.on(RustPlusEvents.EntityChange, (entityChange) => { this.onRustPlusEntityChange(entityChange); });
   }
 
   private async onNewSwitchPush(pushNotif: PushNotificationBody): Promise<void> {
     const entityInfo = await this.rustPlus.getEntityInfo(pushNotif.entityId);
     const switchEntityInfo = new SwitchEntityInfo(pushNotif.entityName, pushNotif.entityId, entityInfo.payload.value);
     const switchEntity = new Switch(switchEntityInfo);
+    this.state.pairedSwitches.set(pushNotif.entityId, switchEntity);
     this.discordClient.sendPairedDeviceMessage(switchEntity);
   }
 
   private async onNewAlarmPush(pushNotif: PushNotificationBody): Promise<void> {
     const alarmEntityInfo = new AlarmEntityInfo(pushNotif.entityName, pushNotif.entityId);
     const alarmEntity = new Alarm(alarmEntityInfo);
+    this.state.pairedAlarms.set(pushNotif.entityId, alarmEntity);
     this.discordClient.sendPairedDeviceMessage(alarmEntity);
   }
 
@@ -255,6 +259,7 @@ export default class Manager {
     const entityInfo = await this.rustPlus.getEntityInfo(pushNotif.entityId);
     const storageMonitorEntityInfo = new StorageMonitorEntityInfo(pushNotif.entityName, pushNotif.entityId, entityInfo.payload.capacity);
     const storageMonitorEntity = new StorageMonitor(storageMonitorEntityInfo);
+    this.state.pairedStorageMonitors.set(pushNotif.entityId, storageMonitorEntity);
     this.discordClient.sendPairedDeviceMessage(storageMonitorEntity);
   }
 

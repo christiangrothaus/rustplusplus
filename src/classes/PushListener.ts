@@ -100,7 +100,7 @@ class PushListener extends EventEmitter {
       }
       this.state.pushIds.push(persistentId);
 
-      switch (body.entityType) {
+      switch (body.entityName) {
         case EntityType.Switch: {
           this.emit(PushEvents.NewSwitch, body);
           break;

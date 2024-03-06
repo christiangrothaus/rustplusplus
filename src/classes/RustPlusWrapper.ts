@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import RustPlus from '@liamcottle/rustplus.js';
-import { EntityInfo, Message } from '../models/RustPlus.models';
+import { EntityChanged, EntityInfo, Message } from '../models/RustPlus.models';
 import { EventEmitter } from 'events';
+import State from './State';
 
 export const RUST_PLUS_SERVER_PORT_DEFAULT = 28082;
 export const RUST_PLUS_SERVER_PORT_OFFSET = 67;
@@ -11,13 +12,20 @@ export enum RustPlusEvents {
   Connected = 'Connected'
 }
 
-export default class RustPlusWrapper extends EventEmitter {
+declare interface RustPlusWrapper {
+  on(event: RustPlusEvents.EntityChange, listener: (entityChanged: EntityChanged) => void): this;
+  on(event: RustPlusEvents.Connected, listener: () => void): this;
+}
+
+class RustPlusWrapper extends EventEmitter {
 
   serverHost: string;
 
   serverPort: number;
 
   rustToken: string;
+
+  state: State = State.getInstance();
 
   private client: RustPlus;
 
@@ -103,13 +111,38 @@ export default class RustPlusWrapper extends EventEmitter {
     return !!this.client;
   }
 
+  public subscribeToAllEntityChanges(): void {
+    if (!this.client) {
+      throw new Error('Failed to get all entity info. Client not connected.');
+    }
+
+    const pairedSwitches = this.state.pairedSwitches.values();
+    const pairedAlarms = this.state.pairedAlarms.values();
+    const pairedStorageMonitors = this.state.pairedStorageMonitors.values();
+    const pairedEntities = [...pairedSwitches, ...pairedAlarms, ...pairedStorageMonitors];
+
+    for (const entity of pairedEntities) {
+      this.client.getEntityInfo(entity.entityInfo.entityId, (message: Message) => {
+        const entityChanged: EntityChanged = {
+          entityId: +entity.entityInfo.entityId,
+          ...message.response.entityInfo
+        };
+
+        this.emit(RustPlusEvents.EntityChange, entityChanged);
+      });
+      setTimeout(() => {}, 334); // set to about 3 requests per second to match the replenish rate
+    }
+  }
+
   private registerListeners(): void {
     this.client.on('connected', () => {
       this.emit(RustPlusEvents.Connected);
     });
 
     this.client.on('message', (message: Message) => {
-      this.emit(RustPlusEvents.EntityChange, message);
+      if (message?.broadcast?.entityChanged) {
+        this.emit(RustPlusEvents.EntityChange, message.broadcast.entityChanged);
+      }
     });
   }
 
@@ -138,3 +171,5 @@ export default class RustPlusWrapper extends EventEmitter {
     this.keepAliveId = undefined;
   }
 }
+
+export default RustPlusWrapper;

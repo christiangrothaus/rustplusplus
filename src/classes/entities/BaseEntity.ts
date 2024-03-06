@@ -7,15 +7,25 @@ export default abstract class BaseEntity<T extends BaseEntityInfo> implements Me
 
   public components: Array<ActionRowBuilder<ButtonBuilder>>;
 
-  public entityInfo: T;
+  public get entityInfo(): T {
+    return this._entityInfo;
+  }
 
   public abstract readonly entityType: EntityType;
 
   protected abstract ENTITY_IMAGE_URL: string;
 
-  constructor(entityInfo: T) {
-    this.entityInfo = entityInfo;
+  protected _entityInfo: T;
 
+  constructor(entityInfo: T) {
+    this._entityInfo = entityInfo;
+
+    this.embeds = [this.createMessageEmbed(this.entityInfo)];
+    this.components = [this.createMessageButtons(this.entityInfo)];
+  }
+
+  public updateEntityInfo(entityInfo: Partial<T>): void {
+    this._entityInfo = { ...this.entityInfo, ...entityInfo };
     this.embeds = [this.createMessageEmbed(this.entityInfo)];
     this.components = [this.createMessageButtons(this.entityInfo)];
   }
