@@ -17,7 +17,7 @@ export type DataToSaveModel = {
   pushIds: Array<string>,
   pairedSwitches: Array<SwitchEntityInfo>,
   pairedAlarms: Array<AlarmEntityInfo>,
-  pairedStorageMonitors: Array<StorageMonitorEntityInfo>
+  pairedStorageMonitors: Array<Partial<StorageMonitorEntityInfo>>
 };
 
 export type SavedDataModel = {

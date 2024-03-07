@@ -1,14 +1,19 @@
 import { EntityType } from '../../models/RustPlus.models';
 import BaseEntityInfo from './BaseEntityInfo';
 
+/**
+ * @key Item ID
+ * @value Item Count
+ */
+export type StorageItems = Map<string, number>;
 export default class StorageMonitorEntityInfo extends BaseEntityInfo {
   entityType: EntityType = EntityType.StorageMonitor;
 
-  capacity?: number;
+  items: StorageItems;
 
-  constructor(name: string, entityId: string, capacity?: number) {
+  constructor(name: string, entityId: string, items: StorageItems) {
     super(name, entityId);
 
-    this.capacity = capacity;
+    this.items = items;
   }
 }

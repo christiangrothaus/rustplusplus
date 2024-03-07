@@ -2,6 +2,16 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'disc
 import BaseEntity from './BaseEntity';
 import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
 import { EntityType } from '../../models/RustPlus.models';
+import RUST_ITEMS from '../../constants/rust-items';
+
+/**
+ * @param name Item Display Name
+ * @param value Item Count
+ */
+export type StorageMonitorField = {
+  name: string;
+  value: string;
+};
 
 export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo> {
   public readonly entityType = EntityType.StorageMonitor;
@@ -13,11 +23,13 @@ export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo>
   }
 
   createMessageEmbed(entityInfo: StorageMonitorEntityInfo): EmbedBuilder {
-    const { name, entityId, capacity } = entityInfo;
+    const { name, entityId, items } = entityInfo;
+
+    const fields = Array.from(items).map(([itemId, itemCount]) => this.createField(itemId, itemCount));
 
     const embedBuilder = new EmbedBuilder()
       .setColor(0x2255ff)
-      .addFields({ name: 'Capacity', value: `${capacity}` })
+      .addFields(fields)
       .setTitle(name)
       .setFooter({ text: entityId })
       .setTimestamp()
@@ -40,5 +52,19 @@ export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo>
       .setStyle(ButtonStyle.Secondary);
 
     return new ActionRowBuilder<ButtonBuilder>().setComponents(editButton, deleteButton);
+  }
+
+  toJSON(): Partial<StorageMonitorEntityInfo> {
+    const json = { name: this.entityInfo.name, entityId: this.entityInfo.entityId };
+    return json;
+  }
+
+  private createField(itemId: string, itemCount: number): StorageMonitorField {
+    const field: StorageMonitorField = {
+      name: RUST_ITEMS[itemId].displayName,
+      value: `${itemCount}`
+    };
+
+    return field;
   }
 }

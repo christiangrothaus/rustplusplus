@@ -8,5 +8,5 @@
     "allowImportingTsExtensions": true,
     "typeRoots": ["./types", "./node_modules/@types"]
   },
-  "include": ["./**/*.ts", "./.eslintrc.js"]
+  "include": ["./**/*.ts", "./.eslintrc.js", "./scripts/rust-items.js"]
 }

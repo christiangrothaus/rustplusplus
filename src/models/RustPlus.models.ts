@@ -2,7 +2,7 @@
 export enum EntityType {
   Switch = 'Switch',
   Alarm = 'Alarm',
-  StorageMonitor = 'StorageMonitor'
+  StorageMonitor = 'Storage Monitor'
 }
 
 export type TeamInfoMember = {

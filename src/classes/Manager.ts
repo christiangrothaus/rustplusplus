@@ -11,7 +11,7 @@ import {
 import State from './State';
 import PushListener, { PushEvents, PushNotificationBody } from './PushListener';
 import RustPlusWrapper, { RustPlusEvents } from './RustPlusWrapper';
-import { EntityChanged } from '../models/RustPlus.models';
+import { EntityChanged, EntityPayloadItem } from '../models/RustPlus.models';
 import DiscordWrapper, { InteractionCreateEvents } from './DiscordWrapper';
 import promptSync from 'prompt-sync';
 import PushRegister from './PushRegister';
@@ -22,7 +22,7 @@ import Alarm from './entities/Alarm';
 import StorageMonitor from './entities/StorageMonitor';
 import SwitchEntityInfo from './entityInfo/SwitchEntityInfo';
 import AlarmEntityInfo from './entityInfo/AlarmEntityInfo';
-import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
+import StorageMonitorEntityInfo, { StorageItems } from './entityInfo/StorageMonitorEntityInfo';
 
 type RequiredEnv = {
   discordToken: string;
@@ -229,7 +229,8 @@ export default class Manager {
     if (pairedDevice instanceof Switch) {
       pairedDevice.updateEntityInfo({ isActive: entityChange?.payload.value });
     } else if (pairedDevice instanceof StorageMonitor) {
-      pairedDevice.updateEntityInfo({ capacity: entityChange?.payload.capacity });
+      const items = this.entityPayloadItemToStorageEntityItems(entityChange.payload.items);
+      pairedDevice.updateEntityInfo({ items });
     }
 
     const discordMessage = await this.discordClient.getPairedDeviceMessage(entityId);
@@ -257,7 +258,8 @@ export default class Manager {
 
   private async onNewStorageMonitorPush(pushNotif: PushNotificationBody): Promise<void> {
     const entityInfo = await this.rustPlus.getEntityInfo(pushNotif.entityId);
-    const storageMonitorEntityInfo = new StorageMonitorEntityInfo(pushNotif.entityName, pushNotif.entityId, entityInfo.payload.capacity);
+    const items = this.entityPayloadItemToStorageEntityItems(entityInfo.payload.items);
+    const storageMonitorEntityInfo = new StorageMonitorEntityInfo(pushNotif.entityName, pushNotif.entityId, items);
     const storageMonitorEntity = new StorageMonitor(storageMonitorEntityInfo);
     this.state.pairedStorageMonitors.set(pushNotif.entityId, storageMonitorEntity);
     this.discordClient.sendPairedDeviceMessage(storageMonitorEntity);
@@ -274,4 +276,19 @@ export default class Manager {
       await this.onNewStorageMonitorPush(pushNotif);
     });
   }
+
+  private entityPayloadItemToStorageEntityItems(payloadItems: Array<EntityPayloadItem>): StorageItems {
+    const items = new Map<string, number>();
+    payloadItems.forEach((item) => {
+      const itemId = `${item.itemId}`;
+      if (items.has(itemId)) {
+        items.set(itemId, items.get(itemId) + item.quantity);
+      } else {
+        items.set(itemId, item.quantity);
+      }
+    });
+
+    return items;
+  }
+
 }

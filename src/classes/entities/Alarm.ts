@@ -40,4 +40,8 @@ export default class Alarm extends BaseEntity<AlarmEntityInfo> {
 
     return new ActionRowBuilder<ButtonBuilder>().setComponents(editButton, deleteButton);
   }
+
+  public toJSON(): AlarmEntityInfo {
+    return this.entityInfo;
+  }
 }

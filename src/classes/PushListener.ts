@@ -1,6 +1,6 @@
 import push from 'push-receiver';
 import fs from 'fs';
-import { EntityType } from '../models/RustPlus.models';
+import { EntityType as EntityName } from '../models/RustPlus.models';
 import path from 'path';
 import { Awaitable } from 'discord.js';
 import Manager from './Manager';
@@ -27,7 +27,7 @@ type Push = {
 
 export type PushNotificationBody = {
   img: string,
-  entityType: EntityType,
+  entityType: EntityName,
   ip: string,
   entityId: string,
   type: string,
@@ -101,15 +101,15 @@ class PushListener extends EventEmitter {
       this.state.pushIds.push(persistentId);
 
       switch (body.entityName) {
-        case EntityType.Switch: {
+        case EntityName.Switch: {
           this.emit(PushEvents.NewSwitch, body);
           break;
         }
-        case EntityType.Alarm: {
+        case EntityName.Alarm: {
           this.emit(PushEvents.NewAlarm, body);
           break;
         }
-        case EntityType.StorageMonitor: {
+        case EntityName.StorageMonitor: {
           this.emit(PushEvents.NewStorageMonitor, body);
           break;
         }

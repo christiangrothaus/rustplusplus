@@ -51,4 +51,8 @@ export default class Switch extends BaseEntity<SwitchEntityInfo> {
 
     return new ActionRowBuilder<ButtonBuilder>().setComponents(onButton, offButton, editButton, deleteButton);
   }
+
+  public toJSON(): SwitchEntityInfo {
+    return this.entityInfo;
+  }
 }

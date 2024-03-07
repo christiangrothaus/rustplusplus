@@ -30,9 +30,7 @@ export default abstract class BaseEntity<T extends BaseEntityInfo> implements Me
     this.components = [this.createMessageButtons(this.entityInfo)];
   }
 
-  public toJSON(): T {
-    return this.entityInfo;
-  }
+  public abstract toJSON(): { [key: string]: any };
 
   protected abstract createMessageEmbed(entityInfo: T): EmbedBuilder;
 
