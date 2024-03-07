@@ -64,7 +64,7 @@ export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo>
 
   private createField(itemId: string, itemCount: number): StorageMonitorField {
     const field: StorageMonitorField = {
-      name: RUST_ITEMS[itemId].displayName,
+      name: RUST_ITEMS?.[itemId]?.displayName || 'Unknown Item',
       value: `${itemCount}`
     };
 
