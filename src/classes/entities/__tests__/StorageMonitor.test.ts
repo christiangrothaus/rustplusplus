@@ -8,8 +8,8 @@ describe('StorageMonitor', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        capacity: 100,
-        entityType: 'StorageMonitor'
+        entityType: 'Storage Monitor',
+        items: new Map<string, number>([['39600618', 100]])
       } as StorageMonitorEntityInfo;
       const storageMonitorMessage = new StorageMonitor(entityInfo);
 
@@ -24,8 +24,8 @@ describe('StorageMonitor', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        capacity: 100,
-        entityType: 'StorageMonitor'
+        entityType: 'Storage Monitor',
+        items: new Map<string, number>([['39600618', 100]])
       } as StorageMonitorEntityInfo;
       const storageMonitorMessage = new StorageMonitor(entityInfo);
       const embedBuilder = storageMonitorMessage.createMessageEmbed(entityInfo);
@@ -37,8 +37,8 @@ describe('StorageMonitor', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        capacity: 100,
-        entityType: 'StorageMonitor'
+        entityType: 'Storage Monitor',
+        items: new Map<string, number>([['39600618', 100]])
       } as StorageMonitorEntityInfo;
       const storageMonitorMessage = new StorageMonitor(entityInfo);
       const embedBuilder = storageMonitorMessage.createMessageEmbed(entityInfo);
@@ -52,8 +52,8 @@ describe('StorageMonitor', () => {
       const entityInfo = {
         name: 'name',
         entityId: 'id',
-        capacity: 100,
-        entityType: 'StorageMonitor'
+        entityType: 'Storage Monitor',
+        items: new Map<string, number>([['39600618', 100]])
       } as StorageMonitorEntityInfo;
       const storageMonitorMessage = new StorageMonitor(entityInfo);
       const actionRowBuilder = storageMonitorMessage.createMessageButtons(entityInfo);

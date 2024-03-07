@@ -40,7 +40,7 @@ describe('state', () => {
       state.guildId = '1234';
       state.pushIds = ['messageId1', 'messageId2'];
       state.pairedSwitches.set('entityId', new Switch(new SwitchEntityInfo('name', 'entityId', true)));
-      state.pairedStorageMonitors.set('entityId', new StorageMonitor(new StorageMonitorEntityInfo('name', 'entityId', 100)));
+      state.pairedStorageMonitors.set('entityId', new StorageMonitor(new StorageMonitorEntityInfo('name', 'entityId', new Map())));
       state.pairedAlarms.set('entityId', new Alarm(new AlarmEntityInfo('name', 'entityId')));
 
       const expected = JSON.stringify({
@@ -71,8 +71,7 @@ describe('state', () => {
           {
             'name': 'name',
             'entityId': 'entityId',
-            'entityType': 'StorageMonitor',
-            'capacity': 100
+            'entityType': 'Storage Monitor'
           }
         ]
       }, null, 2);
@@ -98,7 +97,7 @@ describe('state', () => {
       const RUST_TOKEN = 'myToken';
       const PAIRED_SWITCHES = [new Switch(new SwitchEntityInfo('switch', '1', true))];
       const PAIRED_ALARMS = [new Alarm(new AlarmEntityInfo('alarm', '2'))];
-      const PAIRED_STORAGE_MONITORS = [new StorageMonitor(new StorageMonitorEntityInfo('storageMonitor', '3', 100))];
+      const PAIRED_STORAGE_MONITORS = [new StorageMonitor(new StorageMonitorEntityInfo('storageMonitor', '3'))];
       const data = {
         rustServerHost: RUST_SERVER_HOST,
         rustServerPort: RUST_SERVER_PORT,

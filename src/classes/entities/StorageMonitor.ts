@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { APIEmbedField, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import BaseEntity from './BaseEntity';
 import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
 import { EntityType } from '../../models/RustPlus.models';
@@ -25,7 +25,10 @@ export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo>
   createMessageEmbed(entityInfo: StorageMonitorEntityInfo): EmbedBuilder {
     const { name, entityId, items } = entityInfo;
 
-    const fields = Array.from(items).map(([itemId, itemCount]) => this.createField(itemId, itemCount));
+    let fields: Array<APIEmbedField> = [];
+    if (items) {
+      fields = Array.from(items).map(([itemId, itemCount]) => this.createField(itemId, itemCount));
+    }
 
     const embedBuilder = new EmbedBuilder()
       .setColor(0x2255ff)
@@ -55,7 +58,7 @@ export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo>
   }
 
   toJSON(): Partial<StorageMonitorEntityInfo> {
-    const json = { name: this.entityInfo.name, entityId: this.entityInfo.entityId };
+    const json = { name: this.entityInfo.name, entityId: this.entityInfo.entityId, entityType: this.entityType };
     return json;
   }
 

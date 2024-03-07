@@ -102,19 +102,22 @@ export default class State {
 
       if (saveData.pairedSwitches) {
         for (const entityInfo of saveData.pairedSwitches) {
-          const entity = new Switch(entityInfo);
+          const switchesEntityInfo = new SwitchEntityInfo(entityInfo.name, entityInfo.entityId, entityInfo.isActive);
+          const entity = new Switch(switchesEntityInfo);
           this.pairedSwitches.set(entityInfo.entityId, entity);
         }
       }
       if (saveData.pairedStorageMonitors) {
         for (const entityInfo of saveData.pairedStorageMonitors) {
-          const entity = new StorageMonitor(entityInfo);
+          const storageMonitorEntityInfo = new StorageMonitorEntityInfo(entityInfo.name, entityInfo.entityId);
+          const entity = new StorageMonitor(storageMonitorEntityInfo);
           this.pairedStorageMonitors.set(entityInfo.entityId, entity);
         }
       }
       if (saveData.pairedAlarms) {
         for (const entityInfo of saveData.pairedAlarms) {
-          const entity = new Alarm(entityInfo);
+          const alarmEntityInfo = new AlarmEntityInfo(entityInfo.name, entityInfo.entityId);
+          const entity = new Alarm(alarmEntityInfo);
           this.pairedAlarms.set(entityInfo.entityId, entity);
         }
       }

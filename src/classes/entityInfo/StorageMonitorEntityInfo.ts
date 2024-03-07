@@ -9,11 +9,11 @@ export type StorageItems = Map<string, number>;
 export default class StorageMonitorEntityInfo extends BaseEntityInfo {
   entityType: EntityType = EntityType.StorageMonitor;
 
-  items: StorageItems;
+  items: StorageItems = new Map<string, number>();
 
-  constructor(name: string, entityId: string, items: StorageItems) {
+  constructor(name: string, entityId: string, items?: StorageItems) {
     super(name, entityId);
 
-    this.items = items;
+    this.items = items ?? new Map<string, number>();
   }
 }

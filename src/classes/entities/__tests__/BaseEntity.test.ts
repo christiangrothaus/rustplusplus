@@ -4,6 +4,9 @@ import AlarmEntityInfo from '../../entityInfo/AlarmEntityInfo';
 import { EntityType } from '../../../models/RustPlus.models';
 
 class DummySmartMessage extends BaseEntity<AlarmEntityInfo> {
+  public toJSON(): AlarmEntityInfo {
+    return this.entityInfo;
+  }
   public entityType: EntityType;
   protected ENTITY_IMAGE_URL: string;
 
