@@ -1,12 +1,65 @@
 import { EntityInfo, EntityType, Message } from '../../models/RustPlus.models';
+import { ENV_FILE_PATH } from '../Manager';
+import { CONFIG_FILE } from '../PushListener';
 import RustPlusWrapper, { RustPlusEvents } from '../RustPlusWrapper';
 import RustPlus from '@liamcottle/rustplus.js';
+import { SAVE_DATA_PATH } from '../State';
+
+jest.mock('fs', () => {
+  return {
+    ...jest.requireActual('fs'),
+    readFileSync: jest.fn().mockImplementation((path: string) => {
+      switch (path) {
+        case SAVE_DATA_PATH: {
+          return JSON.stringify({
+            rustServerHost: 'localhost',
+            rustServerPort: 28082,
+            rustToken: '123456',
+            pushIds: [],
+            pairedSwitches: [],
+            pairedAlarms: [],
+            pairedStorageMonitors: []
+          });
+        }
+        case CONFIG_FILE: {
+          return JSON.stringify({
+            fcm_credentials: {
+              keys: {
+                privateKey: 'privateKey',
+                publicKey: 'publicKey',
+                authSecret: 'keyAuthSecret'
+              },
+              fcm: {
+                token: 'fcmToken',
+                pushSet: 'pushSet'
+              },
+              gcm: {
+                token: 'gcmToken',
+                androidId: 'gcmAndroidId',
+                securityToken: 'gcmSecurityToken',
+                appId: 'gcmAppId'
+              }
+            },
+            expo_push_token: 'expoPushToken',
+            rustplus_auth_token: 'rustPlusAuthToken'
+          });
+        }
+        case ENV_FILE_PATH: {
+          return `DISCORD_TOKEN=discordToken
+          APPLICATION_ID=applicationId
+          STEAM_ID=steamId`;
+        }
+      }
+    }),
+    writeFileSync: jest.fn().mockImplementation(() => {})
+  };
+});
 
 describe('RustPlusWrapper', () => {
   let wrapper: RustPlusWrapper;
 
   afterEach(() => {
-    wrapper.disconnect();
+    wrapper?.disconnect();
   });
 
   describe('ctor', () => {
