@@ -240,7 +240,7 @@ jest.mock('fs', () => {
   };
 });
 
-describe('DiscordManager', () => {
+describe('Manager', () => {
   let discordManager: Manager;
 
   beforeEach(() => {
@@ -473,7 +473,7 @@ describe('DiscordManager', () => {
             embeds: [{ title: 'entityName', footer: { text: 'entityId' } }]
           }
         };
-        const toggleSmartSwitchSpy = jest.spyOn(discordManager.rustPlus, 'toggleSmartSwitch');
+        const toggleSmartSwitchSpy = jest.spyOn(discordManager.rustPlus, 'toggleSmartSwitch').mockImplementation();
 
         // @ts-expect-error - mocking interaction
         await discordManager['onButtonInteraction'](interaction as Interaction);
@@ -491,7 +491,7 @@ describe('DiscordManager', () => {
             embeds: [{ title: 'entityName', footer: { text: 'entityId' } }]
           }
         };
-        const toggleSmartSwitchSpy = jest.spyOn(discordManager.rustPlus, 'toggleSmartSwitch');
+        const toggleSmartSwitchSpy = jest.spyOn(discordManager.rustPlus, 'toggleSmartSwitch').mockImplementation();
 
         // @ts-expect-error - mocking interaction
         await discordManager['onButtonInteraction'](interaction as Interaction);
@@ -506,6 +506,7 @@ describe('DiscordManager', () => {
       discordManager = new Manager();
       await discordManager.start();
       const interaction = {
+        deferUpdate: jest.fn().mockResolvedValue({}),
         message: {
           embeds: [{ footer: { text: 'entityId' } }],
           edit: jest.fn()

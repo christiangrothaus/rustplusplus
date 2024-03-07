@@ -113,15 +113,15 @@ describe('DiscordWrapper', () => {
 
       await discordWrapper['createChannels'](mockGuild);
 
-      expect(discordWrapper['notificationsChannel']).toEqual({ name: 'Notifications', type: ChannelType.GuildText });
-      expect(discordWrapper['pairedDevicesChannel']).toEqual({ name: 'Paired Devices', type: ChannelType.GuildText });
+      expect(discordWrapper['notificationsChannel']).toEqual({ name: 'notifications', type: ChannelType.GuildText });
+      expect(discordWrapper['pairedDevicesChannel']).toEqual({ name: 'paired-devices', type: ChannelType.GuildText });
     });
 
     it('should get the channels if they already exist', async () => {
       const mockChildren = {
         cache: [
-          { name: 'Notifications', type: ChannelType.GuildText },
-          { name: 'Paired Devices', type: ChannelType.GuildText }
+          { name: 'notifications', type: ChannelType.GuildText },
+          { name: 'paired-devices', type: ChannelType.GuildText }
         ]
       };
       mockGuild.channels.fetch = jest.fn().mockResolvedValue([{ name: 'Rust++', type: ChannelType.GuildCategory, children: mockChildren }]);
@@ -130,8 +130,8 @@ describe('DiscordWrapper', () => {
       await discordWrapper['createChannels'](mockGuild);
 
       expect(mockGuild.channels.create).not.toHaveBeenCalled();
-      expect(discordWrapper['notificationsChannel']).toEqual({ name: 'Notifications', type: ChannelType.GuildText });
-      expect(discordWrapper['pairedDevicesChannel']).toEqual({ name: 'Paired Devices', type: ChannelType.GuildText });
+      expect(discordWrapper['notificationsChannel']).toEqual({ name: 'notifications', type: ChannelType.GuildText });
+      expect(discordWrapper['pairedDevicesChannel']).toEqual({ name: 'paired-devices', type: ChannelType.GuildText });
     });
   });
 

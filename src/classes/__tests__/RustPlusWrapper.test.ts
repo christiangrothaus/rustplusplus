@@ -65,16 +65,6 @@ describe('RustPlusWrapper', () => {
       await expect(wrapper.toggleSmartSwitch('entityId', true)).rejects.toThrow('Failed to toggle smart switch. Client not connected.');
     });
 
-    it('should reject with an error if the request times out', async () => {
-      wrapper = new RustPlusWrapper('localhost', 'token');
-      jest.spyOn(RustPlus.prototype, 'connect').mockImplementation(() => {});
-      jest.spyOn(RustPlus.prototype, 'turnSmartSwitchOn').mockImplementation(() => {});
-
-      wrapper.connect();
-
-      await expect(wrapper.toggleSmartSwitch('entityId', true)).rejects.toBe('Request timed out');
-    });
-
     describe('on', () => {
       it('should resolve with the message if the request is successful', async () => {
         wrapper = new RustPlusWrapper('localhost', 'token');

@@ -82,13 +82,10 @@ class RustPlusWrapper extends EventEmitter {
         throw new Error('Failed to toggle smart switch. Client not connected.');
       }
 
-      const timeoutId = setTimeout(() => {
-        reject('Request timed out');
-      }, 3000);
       if (on) {
         this.client.turnSmartSwitchOn(entityId, (message: Message) => {
-          clearTimeout(timeoutId);
           const error = this.getErrorMessage(message);
+          console.log(error);
           if (error) {
             reject(error);
           }
@@ -96,7 +93,6 @@ class RustPlusWrapper extends EventEmitter {
         });
       } else {
         this.client.turnSmartSwitchOff(entityId, (message: Message) => {
-          clearTimeout(timeoutId);
           const error = this.getErrorMessage(message);
           if (error) {
             reject(error);
