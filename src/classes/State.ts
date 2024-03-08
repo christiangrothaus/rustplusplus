@@ -3,9 +3,9 @@ import path from 'path';
 import Switch from './entities/Switch';
 import StorageMonitor from './entities/StorageMonitor';
 import Alarm from './entities/Alarm';
-import SwitchEntityInfo from './entityInfo/SwitchEntityInfo';
-import AlarmEntityInfo from './entityInfo/AlarmEntityInfo';
-import StorageMonitorEntityInfo from './entityInfo/StorageMonitorEntityInfo';
+import SwitchEntityInfo from './entities/entity-info/SwitchEntityInfo';
+import AlarmEntityInfo from './entities/entity-info/AlarmEntityInfo';
+import StorageMonitorEntityInfo from './entities/entity-info/StorageMonitorEntityInfo';
 
 export const SAVE_DATA_PATH = path.join(__dirname + '../../../save.json');
 

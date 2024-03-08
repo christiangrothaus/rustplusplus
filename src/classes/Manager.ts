@@ -9,7 +9,7 @@ import {
   TextInputStyle
 } from 'discord.js';
 import State from './State';
-import PushListener, { PushEvents, PushNotificationBody } from './PushListener';
+import PushListener, { PushData, PushEvents, PushNotificationBody } from './PushListener';
 import RustPlusWrapper, { RustPlusEvents } from './RustPlusWrapper';
 import { EntityChanged, EntityPayloadItem } from '../models/RustPlus.models';
 import DiscordWrapper, { InteractionCreateEvents } from './DiscordWrapper';
@@ -20,9 +20,11 @@ import path from 'path';
 import Switch from './entities/Switch';
 import Alarm from './entities/Alarm';
 import StorageMonitor from './entities/StorageMonitor';
-import SwitchEntityInfo from './entityInfo/SwitchEntityInfo';
-import AlarmEntityInfo from './entityInfo/AlarmEntityInfo';
-import StorageMonitorEntityInfo, { StorageItems } from './entityInfo/StorageMonitorEntityInfo';
+import SwitchEntityInfo from './entities/entity-info/SwitchEntityInfo';
+import AlarmEntityInfo from './entities/entity-info/AlarmEntityInfo';
+import StorageMonitorEntityInfo, { StorageItems } from './entities/entity-info/StorageMonitorEntityInfo';
+import AlarmNotification from './notifications/AlarmNotification';
+import AlarmNotificationInfo from './notifications/notification-info/AlarmNotificationInfo';
 
 type RequiredEnv = {
   discordToken: string;
@@ -265,15 +267,23 @@ export default class Manager {
     this.discordClient.sendPairedDeviceMessage(storageMonitorEntity);
   }
 
+  private async onAlarmTriggered(pushData: PushData): Promise<void> {
+    const alarmNotification = new AlarmNotification(new AlarmNotificationInfo(pushData.title, pushData.message));
+    this.discordClient.sendNotificationMessage(alarmNotification);
+  }
+
   private registerPushListeners(): void {
-    this.pushListener.on(PushEvents.NewSwitch, async (pushNotif) => {
-      await this.onNewSwitchPush(pushNotif);
+    this.pushListener.on(PushEvents.NewSwitch, (pushNotif) => {
+      this.onNewSwitchPush(pushNotif);
     });
-    this.pushListener.on(PushEvents.NewAlarm, async (pushNotif) => {
-      await this.onNewAlarmPush(pushNotif);
+    this.pushListener.on(PushEvents.NewAlarm, (pushNotif) => {
+      this.onNewAlarmPush(pushNotif);
     });
-    this.pushListener.on(PushEvents.NewStorageMonitor, async (pushNotif) => {
-      await this.onNewStorageMonitorPush(pushNotif);
+    this.pushListener.on(PushEvents.NewStorageMonitor, (pushNotif) => {
+      this.onNewStorageMonitorPush(pushNotif);
+    });
+    this.pushListener.on(PushEvents.AlarmTriggered, (pushData) => {
+      this.onAlarmTriggered(pushData);
     });
   }
 

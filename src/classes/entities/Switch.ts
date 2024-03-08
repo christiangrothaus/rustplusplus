@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import BaseEntity from './BaseEntity';
-import SwitchEntityInfo from '../entityInfo/SwitchEntityInfo';
+import SwitchEntityInfo from './entity-info/SwitchEntityInfo';
 import { EntityType } from '../../models/RustPlus.models';
 
 export default class Switch extends BaseEntity<SwitchEntityInfo> {

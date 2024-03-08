@@ -13,7 +13,7 @@ import {
 } from 'discord.js';
 import Manager, { ENV_FILE_PATH } from '../Manager';
 import CommandManager from '../CommandManager';
-import SwitchEntityInfo from '../entityInfo/SwitchEntityInfo';
+import SwitchEntityInfo from '../entities/entity-info/SwitchEntityInfo';
 import { CONFIG_FILE } from '../PushListener';
 import Switch from '../entities/Switch';
 import Alarm from '../entities/Alarm';
@@ -190,6 +190,15 @@ jest.mock('dotenv', () => {
   };
 });
 
+jest.mock('push-receiver', () => {
+  return {
+    listen: jest.fn().mockResolvedValue({
+      destroy: jest.fn()
+    }),
+    register: jest.fn().mockResolvedValue({})
+  };
+});
+
 jest.mock('fs', () => {
   return {
     ...jest.requireActual('fs'),
@@ -252,6 +261,7 @@ describe('Manager', () => {
 
   afterEach(() => {
     discordManager.destroy();
+    jest.clearAllTimers();
   });
 
   describe('ctor', () => {

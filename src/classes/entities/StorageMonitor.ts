@@ -1,17 +1,8 @@
 import { APIEmbedField, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import BaseEntity from './BaseEntity';
-import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
+import StorageMonitorEntityInfo from './entity-info/StorageMonitorEntityInfo';
 import { EntityType } from '../../models/RustPlus.models';
 import RUST_ITEMS from '../../constants/rust-items';
-
-/**
- * @param name Item Display Name
- * @param value Item Count
- */
-export type StorageMonitorField = {
-  name: string;
-  value: string;
-};
 
 export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo> {
   public readonly entityType = EntityType.StorageMonitor;
@@ -63,10 +54,11 @@ export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo>
     return json;
   }
 
-  private createField(itemId: string, itemCount: number): StorageMonitorField {
-    const field: StorageMonitorField = {
+  private createField(itemId: string, itemCount: number): APIEmbedField {
+    const field: APIEmbedField = {
       name: RUST_ITEMS?.[itemId]?.displayName || 'Unknown Item',
-      value: `${itemCount}`
+      value: `${itemCount}`,
+      inline: true
     };
 
     return field;

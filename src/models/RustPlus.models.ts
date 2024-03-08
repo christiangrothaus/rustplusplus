@@ -1,7 +1,7 @@
 
 export enum EntityType {
   Switch = 'Switch',
-  Alarm = 'Alarm',
+  Alarm = 'Smart Alarm',
   StorageMonitor = 'Storage Monitor'
 }
 

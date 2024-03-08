@@ -1,6 +1,6 @@
 import { ActionRowBuilder, EmbedBuilder } from 'discord.js';
 import StorageMonitor from '../StorageMonitor';
-import StorageMonitorEntityInfo from '../../entityInfo/StorageMonitorEntityInfo';
+import StorageMonitorEntityInfo from '../entity-info/StorageMonitorEntityInfo';
 
 describe('StorageMonitor', () => {
   describe('ctor', () => {

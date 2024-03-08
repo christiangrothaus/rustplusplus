@@ -1,6 +1,6 @@
 import { ActionRowBuilder, EmbedBuilder } from 'discord.js';
 import Switch from '../Switch';
-import SwitchEntityInfo from '../../entityInfo/SwitchEntityInfo';
+import SwitchEntityInfo from '../entity-info/SwitchEntityInfo';
 
 describe('Switch', () => {
   describe('ctor', () => {

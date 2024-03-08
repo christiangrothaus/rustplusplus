@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import BaseEntity from './BaseEntity';
-import AlarmEntityInfo from '../entityInfo/AlarmEntityInfo';
+import AlarmEntityInfo from './entity-info/AlarmEntityInfo';
 import { EntityType } from '../../models/RustPlus.models';
 
 export default class Alarm extends BaseEntity<AlarmEntityInfo> {
@@ -16,7 +16,7 @@ export default class Alarm extends BaseEntity<AlarmEntityInfo> {
     const { name, entityId } = entityInfo;
 
     const embedBuilder = new EmbedBuilder()
-      .setColor(0xff5555)
+      .setColor(0x2255ff)
       .setTitle(name)
       .setFooter({ text: entityId })
       .setTimestamp()

@@ -18,7 +18,9 @@ import {
 import CommandManager from './CommandManager';
 import { EventEmitter } from 'events';
 import BaseEntity from './entities/BaseEntity';
-import BaseEntityInfo from './entityInfo/BaseEntityInfo';
+import BaseEntityInfo from './entities/entity-info/BaseEntityInfo';
+import BaseNotification from './notifications/BaseNotification';
+import BaseNotificationInfo from './notifications/notification-info/BaseNotificationInfo';
 
 const notificationChannelCreateOptions: CategoryCreateChannelOptions = {
   name: 'notifications',
@@ -66,6 +68,10 @@ class DiscordWrapper extends EventEmitter {
   public async destroy() {
     this.client.removeAllListeners();
     await this.client.destroy();
+  }
+
+  public async sendNotificationMessage(notif: BaseNotification<BaseNotificationInfo>) {
+    await this.notificationsChannel.send(notif);
   }
 
   public async sendPairedDeviceMessage(entity: BaseEntity<BaseEntityInfo>) {

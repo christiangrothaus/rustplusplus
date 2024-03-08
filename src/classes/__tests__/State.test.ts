@@ -3,9 +3,9 @@ import fs from 'fs';
 import Switch from '../entities/Switch';
 import Alarm from '../entities/Alarm';
 import StorageMonitor from '../entities/StorageMonitor';
-import SwitchEntityInfo from '../entityInfo/SwitchEntityInfo';
-import AlarmEntityInfo from '../entityInfo/AlarmEntityInfo';
-import StorageMonitorEntityInfo from '../entityInfo/StorageMonitorEntityInfo';
+import SwitchEntityInfo from '../entities/entity-info/SwitchEntityInfo';
+import AlarmEntityInfo from '../entities/entity-info/AlarmEntityInfo';
+import StorageMonitorEntityInfo from '../entities/entity-info/StorageMonitorEntityInfo';
 
 jest.mock('fs', () => {
   return {
@@ -64,7 +64,7 @@ describe('state', () => {
           {
             'name': 'name',
             'entityId': 'entityId',
-            'entityType': 'Alarm'
+            'entityType': 'Smart Alarm'
           }
         ],
         'pairedStorageMonitors': [

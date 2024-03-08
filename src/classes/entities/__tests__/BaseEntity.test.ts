@@ -1,6 +1,6 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import BaseEntity from '../BaseEntity';
-import AlarmEntityInfo from '../../entityInfo/AlarmEntityInfo';
+import AlarmEntityInfo from '../entity-info/AlarmEntityInfo';
 import { EntityType } from '../../../models/RustPlus.models';
 
 class DummySmartMessage extends BaseEntity<AlarmEntityInfo> {

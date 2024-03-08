@@ -1,6 +1,6 @@
 import { ActionRowBuilder, EmbedBuilder } from 'discord.js';
 import Alarm from '../Alarm';
-import AlarmEntityInfo from '../../entityInfo/AlarmEntityInfo';
+import AlarmEntityInfo from '../entity-info/AlarmEntityInfo';
 
 describe('Alarm', () => {
   describe('ctor', () => {
@@ -28,7 +28,7 @@ describe('Alarm', () => {
       const smartAlarmMessage = new Alarm(entityInfo);
       const embedBuilder = smartAlarmMessage.createMessageEmbed(entityInfo);
 
-      expect(embedBuilder.data.color).toBe(0xff5555);
+      expect(embedBuilder.data.color).toBe(0x2255ff);
     });
   });
 

@@ -1,13 +1,13 @@
 import { ActionRowBuilder, ButtonBuilder, EmbedBuilder, MessageCreateOptions } from 'discord.js';
 import { EntityType } from '../../models/RustPlus.models';
-import BaseEntityInfo from '../entityInfo/BaseEntityInfo';
+import BaseEntityInfo from './entity-info/BaseEntityInfo';
 
 export default abstract class BaseEntity<T extends BaseEntityInfo> implements MessageCreateOptions {
   public embeds: Array<EmbedBuilder>;
 
   public components: Array<ActionRowBuilder<ButtonBuilder>>;
 
-  public get entityInfo(): T {
+  public get entityInfo(): Readonly<T> {
     return this._entityInfo;
   }
 

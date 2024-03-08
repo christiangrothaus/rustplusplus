@@ -1,4 +1,4 @@
-import { EntityType } from '../../models/RustPlus.models';
+import { EntityType } from '../../../models/RustPlus.models';
 import BaseEntityInfo from './BaseEntityInfo';
 
 /**
