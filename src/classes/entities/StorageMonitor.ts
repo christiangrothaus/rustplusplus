@@ -28,6 +28,7 @@ export default class StorageMonitor extends BaseEntity<StorageMonitorEntityInfo>
     let fields: Array<APIEmbedField> = [];
     if (items) {
       fields = Array.from(items).map(([itemId, itemCount]) => this.createField(itemId, itemCount));
+      fields.slice(0, 25);
     }
 
     const embedBuilder = new EmbedBuilder()
