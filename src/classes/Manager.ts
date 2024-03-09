@@ -127,8 +127,20 @@ export default class Manager {
     if (this.state.rustServerHost) {
       this.rustPlus = new RustPlusWrapper(this.state.rustServerHost, this.state.rustToken, this.state?.rustServerPort);
       this.rustPlus.connect();
+      this.attemptToSubscribeToAllEntityChanges();
     } else {
       throw new Error('No rust server host found in state.');
+    }
+  }
+
+  /**
+   * Recursively attempts to subscribe to all entity changes until the RustPlus client is connected.
+   */
+  private attemptToSubscribeToAllEntityChanges(): void {
+    if (this.rustPlus.isConnected()) {
+      this.rustPlus.subscribeToAllEntityChanges();
+    } else {
+      setTimeout(() => { this.attemptToSubscribeToAllEntityChanges(); }, 3000);
     }
   }
 

@@ -31,6 +31,8 @@ class RustPlusWrapper extends EventEmitter {
 
   private keepAliveId: NodeJS.Timeout;
 
+  private storageMonitorUpdaterId: NodeJS.Timeout;
+
   constructor(serverHost: string, rustToken: string, serverPort: number = RUST_PLUS_SERVER_PORT_DEFAULT) {
     super();
     this.serverHost = serverHost;
@@ -62,6 +64,7 @@ class RustPlusWrapper extends EventEmitter {
       this.removeAllListeners();
     }
     this.stopKeepAlive();
+    this.stopStorageMonitorUpdater();
   }
 
   public async getEntityInfo(entityId: string): Promise<EntityInfo> {
@@ -107,6 +110,10 @@ class RustPlusWrapper extends EventEmitter {
     return !!this.client;
   }
 
+  public isConnected(): boolean {
+    return this.client?.isConnected?.() ?? false;
+  }
+
   public subscribeToAllEntityChanges(): void {
     if (!this.client) {
       throw new Error('Failed to get all entity info. Client not connected.');
@@ -128,6 +135,27 @@ class RustPlusWrapper extends EventEmitter {
       });
       setTimeout(() => {}, 334); // set to about 3 requests per second to match the replenish rate
     }
+
+    this.startStorageMonitorUpdater();
+  }
+
+  private startStorageMonitorUpdater(): void {
+    this.storageMonitorUpdaterId = setInterval(() => {
+      const pairedStorageMonitors = this.state.pairedStorageMonitors.values();
+
+      for (const storageMonitor of pairedStorageMonitors) {
+        setTimeout(() => {}, 334); // set to about 3 requests per second to match the replenish rate
+
+        this.client.getEntityInfo(storageMonitor.entityInfo.entityId, (message: Message) => {
+          const entityChanged: EntityChanged = {
+            entityId: +storageMonitor.entityInfo.entityId,
+            ...message.response.entityInfo
+          };
+
+          this.emit(RustPlusEvents.EntityChange, entityChanged);
+        });
+      }
+    }, 5 * 60 * 1000);
   }
 
   private registerListeners(): void {
@@ -165,6 +193,11 @@ class RustPlusWrapper extends EventEmitter {
   private stopKeepAlive(): void {
     clearInterval(this.keepAliveId);
     this.keepAliveId = undefined;
+  }
+
+  private stopStorageMonitorUpdater(): void {
+    clearInterval(this.storageMonitorUpdaterId);
+    this.storageMonitorUpdaterId = undefined;
   }
 }
 
