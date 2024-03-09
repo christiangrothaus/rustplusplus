@@ -15,7 +15,6 @@ export default class AlarmNotification extends BaseNotification<AlarmNotificatio
       .setColor(0xff3333)
       .setTitle(name)
       .setDescription(message)
-      .setDescription('Alarm Triggered!')
       .setTimestamp();
   }
 }
