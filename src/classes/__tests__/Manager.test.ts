@@ -253,6 +253,7 @@ describe('Manager', () => {
   let discordManager: Manager;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     jest.restoreAllMocks();
     jest.spyOn(Date, 'now').mockReturnValue(0);
