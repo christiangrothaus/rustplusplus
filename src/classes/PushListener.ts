@@ -107,7 +107,6 @@ class PushListener extends EventEmitter {
           this.state.rustToken = body.playerToken;
           manager.rustPlus.updateRustPlusCreds(this.state.rustServerHost, this.state.rustServerPort, body.playerToken);
         }
-        this.state.pushIds.push(persistentId);
 
         switch (body.entityName) {
           case EntityName.Switch: {
@@ -124,6 +123,8 @@ class PushListener extends EventEmitter {
           }
         }
       }
+
+      this.state.pushIds.push(persistentId);
     });
   }
 
