@@ -16,7 +16,7 @@ Rust++ is a Discord bot that integrates with Rust+.  It supports the same featur
 
 # Startup
 
-Run the project using npm start
+Run the project using npm install then npm start.
 
 # Setup
 
