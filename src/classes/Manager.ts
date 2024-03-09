@@ -218,7 +218,6 @@ export default class Manager {
     try {
       await command.execute(interaction, this);
     } catch (error) {
-      console.log(error);
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
       } else {

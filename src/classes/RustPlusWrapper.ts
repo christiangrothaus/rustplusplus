@@ -88,7 +88,6 @@ class RustPlusWrapper extends EventEmitter {
       if (on) {
         this.client.turnSmartSwitchOn(entityId, (message: Message) => {
           const error = this.getErrorMessage(message);
-          console.log(error);
           if (error) {
             reject(error);
           }
